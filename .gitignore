@@ -1,0 +1,53 @@
+# Archivos de caché de Python
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.Python
+build/
+dist/
+develop-eggs/
+
+# Entornos Virtuales
+# Ignora los directorios de entornos virtuales creados comúnmente
+.venv
+venv
+env
+v-env
+*/bin/* # Para algunos sistemas que crean entornos de manera distinta
+*/include/*
+*/lib/*
+
+# Archivos de instalación y pruebas
+.tox/
+.coverage
+.cache/
+nosetests.xml
+coverage.xml
+htmlcov/
+
+# Logs y bases de datos
+*.log
+*.sqlite3
+*.db
+
+# Archivos de editores e IDEs (Ejemplos Comunes)
+.idea/             # IntelliJ/PyCharm
+*.iml
+.vscode/           # VS Code (si solo contiene ajustes de usuario)
+*.swp              # Vim
+*~                 # Archivos de respaldo comunes
+.DS_Store          # macOS
+
+# Jupyter Notebooks y archivos relacionados (si no se rastrean)
+.ipynb_checkpoints
+
+# Archivos de datos sensibles o específicos
+.env               # Archivos de variables de entorno
+.flaskenv          # Variables de entorno de Flask
+
+# Pip
+pip-log.txt
+pip-delete-this-file.txt

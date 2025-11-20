@@ -1,24 +1,18 @@
 import sqlite3
-from sqlite3 import Connection, Cursor
-from datetime import datetime
 import bcrypt
 
 class DatabaseManager:
     """
-    Clase genérica para manejar la conexión y consultas en la base de datos SQLite.
+    Clase para manejar la conexión y consultas en la base de datos SQLite.
     """
 
-    def __init__(self, db_name: str = "library.db"):
+    def __init__(self, db_name="library.db"):
         """
-        Inicializa DatabaseManager y conecta a la base de datos SQLite.
-
-        Args:
-            db_name (str): Nombre del archivo de la base de datos. Por defecto "library.db".
+        Inicializa DatabaseManager.
         """
-        self.db_name: str = db_name
-        self.conn: Connection | None = None
-        self.cursor: Cursor | None = None
-        self.connect()
+        self.db_name = db_name
+        self.conn = None
+        self.cursor = None
 
 
     def connect(self):
@@ -38,35 +32,37 @@ class DatabaseManager:
             self.conn.close()
 
 
-    def execute_query(self, query: str, params: tuple = ()) -> list[tuple]:
+    def execute_query(self, query, params=()):
         """
         Ejecuta una consulta SQL con parámetros opcionales.
-
-        Siempre retorna una lista (vacía si falla o no hay resultados).
 
         Args:
             query (str): Consulta SQL a ejecutar.
             params (tuple): Parámetros para consultas parametrizadas.
 
         Returns:
-            list[tuple]: Resultados de la consulta. Lista vacía si falla o no hay resultados.
+            list: Resultados de la consulta. Lista vacía si falla o no hay resultados.
         """
-        # Asegura al tipador que la conexión y cursor no son None
-        if self.cursor is None or self.conn is None:
-            raise RuntimeError("La conexión a la base de datos no está establecida.")
+        if not self.cursor or not self.conn:
+             print("[ERROR] La conexión a la base de datos no está establecida.")
+             return []
 
         try:
             self.cursor.execute(query, params)
-            self.conn.commit()
+            
+            if not query.strip().upper().startswith("SELECT"):
+                 self.conn.commit()
+
             if query.strip().upper().startswith("SELECT"):
-                return self.cursor.fetchall() or []  # Asegura lista vacía si fetchall devuelve None
+                return self.cursor.fetchall()
+            
             return []
         except sqlite3.Error as e:
-            print(f"[ERROR] Consulta fallida: {query}\nParametros: {params}\nError: {e}")
-            return []  # Nunca retorna None
+            print(f"[ERROR] Consulta fallida: {query}\nError: {e}")
+            return []
 
 
-    def hash_password(self, password: str) -> bytes:
+    def hash_password(self, password):
         """
         Genera un hash seguro para una contraseña usando bcrypt.
 
@@ -77,10 +73,10 @@ class DatabaseManager:
             bytes: Contraseña hasheada.
         """
         salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode(), salt)
+        return bcrypt.hashpw(password.encode('utf-8'), salt)
 
 
-    def verify_password(self, password: str, password_hash: bytes) -> bool:
+    def verify_password(self, password, password_hash):
         """
         Verifica si una contraseña coincide con un hash.
 
@@ -91,4 +87,4 @@ class DatabaseManager:
         Returns:
             bool: True si coincide, False en caso contrario.
         """
-        return bcrypt.checkpw(password.encode(), password_hash)
+        return bcrypt.checkpw(password.encode('utf-8'), password_hash)

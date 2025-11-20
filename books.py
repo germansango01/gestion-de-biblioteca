@@ -6,35 +6,46 @@ class Book:
     Clase para manejar libros de la biblioteca.
     """
 
-
-    def __init__(self, db: DatabaseManager):
+    def __init__(self, db):
         """
-        Inicializa el gestor de libros y crea la tabla si no existen.
+        Inicializa el gestor de libros y crea las tablas si no existen.
 
         Args:
-            db (DatabaseManager): Instancia de DatabaseManager.
+            db: Instancia de DatabaseManager.
         """
         self.db = db
-        self._setup_table()
+        self._setup_tables()
 
 
-    def _setup_table(self):
-        """Crea la tabla books si no existe. Ahora guarda solo el nombre del autor."""
+    def _setup_tables(self):
+        """Crea las tablas 'books' y 'loans' si no existen."""
         if self.db is None:
-            raise RuntimeError("DatabaseManager no está inicializado")
+            raise RuntimeError("DatabaseManager no está inicializado.")
+            
         self.db.execute_query("""
             CREATE TABLE IF NOT EXISTS books (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 isbn TEXT UNIQUE NOT NULL,
-                author TEXT,
-                category TEXT,
+                author TEXT DEFAULT '',
+                category TEXT DEFAULT '',
                 available INTEGER NOT NULL DEFAULT 1
+            );
+        """)
+        
+        self.db.execute_query("""
+            CREATE TABLE IF NOT EXISTS loans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                loan_date TEXT NOT NULL,
+                return_date TEXT NULL,
+                FOREIGN KEY(book_id) REFERENCES books(id)
             );
         """)
 
 
-    def add_book(self, title: str, isbn: str, author: str | None = None, category: str | None = None) -> bool:
+    def add_book(self, title, isbn, author=None, category=None):
         """
         Agrega un libro a la biblioteca.
 
@@ -47,11 +58,10 @@ class Book:
         Returns:
             bool: True si se agregó correctamente, False si falla.
         """
-        try:
-            # Convertir None a cadena vacía para evitar errores de tipo
-            author_val = author or ""
-            category_val = category or ""
+        author_val = author or ""
+        category_val = category or ""
 
+        try:
             self.db.execute_query(
                 "INSERT INTO books (title, isbn, author, category) VALUES (?, ?, ?, ?);",
                 (title, isbn, author_val, category_val)
@@ -62,7 +72,7 @@ class Book:
             return False
 
 
-    def lend_book(self, book_id: int, user_id: int) -> bool:
+    def lend_book(self, book_id, user_id):
         """
         Prestar un libro a un usuario.
 
@@ -74,13 +84,15 @@ class Book:
             bool: True si se prestó correctamente, False si falla.
         """
         try:
-            date = datetime.now().strftime("%Y-%m-%d")
+            loan_date = datetime.now().strftime("%Y-%m-%d")
+
             self.db.execute_query(
                 "INSERT INTO loans (book_id, user_id, loan_date) VALUES (?, ?, ?);",
-                (book_id, user_id, date)
+                (book_id, user_id, loan_date)
             )
+            
             self.db.execute_query(
-                "UPDATE books SET available = 0 WHERE id = ?;",
+                "UPDATE books SET available = 0 WHERE id = ? AND available = 1;",
                 (book_id,)
             )
             return True
@@ -89,7 +101,7 @@ class Book:
             return False
 
 
-    def return_book(self, book_id: int) -> bool:
+    def return_book(self, book_id):
         """
         Devolver un libro prestado.
 
@@ -100,13 +112,15 @@ class Book:
             bool: True si se devolvió correctamente, False si falla.
         """
         try:
-            date = datetime.now().strftime("%Y-%m-%d")
+            return_date = datetime.now().strftime("%Y-%m-%d")
+            
             self.db.execute_query(
                 "UPDATE loans SET return_date = ? WHERE book_id = ? AND return_date IS NULL;",
-                (date, book_id)
+                (return_date, book_id)
             )
+            
             self.db.execute_query(
-                "UPDATE books SET available = 1 WHERE id = ?;",
+                "UPDATE books SET available = 1 WHERE id = ? AND available = 0;",
                 (book_id,)
             )
             return True
@@ -115,7 +129,7 @@ class Book:
             return False
 
 
-    def list_books(self, available_only: bool = False) -> list[tuple]:
+    def list_books(self, available_only=False):
         """
         Lista los libros de la biblioteca.
 
@@ -123,9 +137,13 @@ class Book:
             available_only (bool): Si es True, solo lista los libros disponibles.
 
         Returns:
-            list[tuple]: Lista de libros.
+            list: Lista de libros.
         """
         query = "SELECT id, title, isbn, author, category, available FROM books"
+        params = ()
+        
         if available_only:
-            query += " WHERE available = 1"
-        return self.db.execute_query(query)
+            query += " WHERE available = ?"
+            params = (1,)
+            
+        return self.db.execute_query(query, params)
