@@ -1,4 +1,4 @@
-from database import DatabaseManager
+from clases.database import DatabaseManager
 
 class History:
     """
