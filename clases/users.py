@@ -1,36 +1,19 @@
 from clases.database import DatabaseManager
 
 class User:
-    """
-    Clase para manejar usuarios de la biblioteca, incluyendo la creación y autenticación.
-    """
+    """Clase para gestionar usuarios de la biblioteca, incluyendo la creación y autenticación."""
 
-    def __init__(self, db):
+    def __init__(self, db: DatabaseManager):
         """
-        Inicializa el gestor de usuarios y crea la tabla si no existe.
+        Inicializa el gestor de usuarios.
 
         Args:
-            db: Instancia de DatabaseManager.
+            db (DatabaseManager): Instancia del gestor de base de datos.
         """
         self.db = db
-        self._setup_table()
 
 
-    def _setup_table(self):
-        """Crea la tabla users si no existe."""
-        if self.db is None:
-            raise RuntimeError("DatabaseManager no está inicializado.")
-            
-        self.db.execute_query("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash BLOB NOT NULL 
-            );
-        """)
-
-
-    def create_user(self, username, password):
+    def create_user(self, username: str, password: str) -> bool:
         """
         Crea un nuevo usuario con la contraseña hasheada.
 
@@ -39,22 +22,18 @@ class User:
             password (str): Contraseña en texto plano.
 
         Returns:
-            bool: True si se creó correctamente, False si falla.
+            bool: True si se creó correctamente, False si falla (por duplicidad o error de DB).
         """
-        try:
-            password_hash = self.db.hash_password(password)
-            
-            self.db.execute_query(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?);",
-                (username, password_hash)
-            )
-            return True
-        except Exception as e:
-            print(f"[ERROR] No se pudo crear el usuario: {e}")
-            return False
+        password_hash = self.db.hash_password(password)
+        
+        result = self.db.execute(
+            "INSERT INTO users (username, password_hash) VALUES (?, ?);",
+            (username, password_hash)
+        )
+        return result is not False
 
 
-    def authenticate(self, username, password):
+    def authenticate(self, username: str, password: str) -> int | None:
         """
         Autentica un usuario.
 
@@ -65,17 +44,16 @@ class User:
         Returns:
             int | None: El ID del usuario si la autenticación es exitosa, None en caso contrario.
         """
-        result = self.db.execute_query(
+        # (fetch_one=True)
+        result = self.db.execute(
             "SELECT id, password_hash FROM users WHERE username = ?;",
-            (username,)
+            (username,),
+            fetch_one=True
         )
         
         if result:
-            user_id = result[0][0]
-            password_hash = result[0][1]
-            
-            if isinstance(password_hash, str):
-                 password_hash = password_hash.encode('latin-1') 
+            user_id = result[0]
+            password_hash = result[1]
             
             if self.db.verify_password(password, password_hash):
                 return user_id
@@ -83,12 +61,11 @@ class User:
         return None
 
 
-    def list_users(self):
+    def list_users(self) -> list:
         """
         Lista todos los usuarios.
 
         Returns:
             list: Lista de tuplas con (id, username).
         """
-        result = self.db.execute_query("SELECT id, username FROM users;")
-        return result
+        return self.db.execute("SELECT id, username FROM users ORDER BY id ASC;")

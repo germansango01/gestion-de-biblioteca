@@ -1,83 +1,92 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-
 from clases.database import DatabaseManager
 from views.book_view import BookView
 from views.user_view import UserView
 from views.history_view import HistoryView
 
-# Configuración de la base de datos
+# Database Library
 DB_NAME = "library.db"
 
 class LibraryApp(tk.Tk):
-    """
-    Aplicación Principal usando tk.Notebook para organizar las vistas.
-    """
+
     def __init__(self):
         super().__init__()
-        self.title("Biblioteca")
-        self.geometry("800x600")
+        self.title("Sistema de Biblioteca Modular")
+        self.geometry("900x650")
         
+        # Configuración de estilo TTK
+        style = ttk.Style(self) # <-- Ya no se guarda como self.style
+        style.theme_use('clam')
+        # Estilo principal
+        style.configure('Accent.TButton', background='#2196F3', foreground='white', borderwidth=0)
+        style.map('Accent.TButton', background=[('active', '#1976D2')], foreground=[('active', 'white')])
+
         self.db_manager = None
         
         if self._connect_db():
             self.create_menu()
             self.create_notebook()
         else:
+            messagebox.showerror("Error Fatal", "La aplicación no pudo iniciar debido a un error de base de datos.")
             self.quit()
 
 
     def _connect_db(self):
-        """Intenta conectar con la base de datos."""
+        """Intenta conectar con la base de datos y establece la conexión."""
         self.db_manager = DatabaseManager(db_name=DB_NAME)
-        self.db_manager.connect()
-        
-        if self.db_manager.conn is None:
-            messagebox.showerror("Error", "No se pudo conectar a la base de datos.")
-            return False
-        
-        print(f"Conexión a la base de datos '{DB_NAME}' establecida.")
-        return True
+        self.db_manager.connect_db()
+        # Nota: Asegúrate de eliminar el archivo library.db para que la columna author_id se cree
+        return self.db_manager._conn is not None
 
 
     def create_menu(self):
-        """Crea la barra de menú con la opción de Salir."""
-        menubar = tk.Menu(self)
-        self.config(menu=menubar)
+        """Crea la barra de menú superior."""
+        menubar = tk.Menu(self); self.config(menu=menubar)
 
+        # Menú Archivo
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Archivo", menu=file_menu)
+        file_menu.add_command(label="Recargar Vistas", command=self.reload_notebook)
+        file_menu.add_separator()
         file_menu.add_command(label="Salir", command=self.on_closing)
+        
+        # Menú Ayuda
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Ayuda", menu=help_menu)
+        help_menu.add_command(label="Acerca de", command=lambda: messagebox.showinfo("Acerca de", "Sistema de Biblioteca Simple v1.0"))
 
 
     def create_notebook(self):
-        """Crea el widget Notebook (pestañas) y añade las vistas."""
-        
-        # Inicializa el Notebook (necesita ttk)
-        notebook = ttk.Notebook(self)
-        notebook.pack(pady=10, padx=10, expand=True, fill="both")
+        """Crea el widget Notebook (pestañas) y añade las vistas (Frames)."""
+        if hasattr(self, 'notebook'): self.notebook.destroy()
+            
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(pady=10, padx=10, expand=True, fill="both")
 
-        # 1. Pestaña de Libros
-        book_frame = BookView(notebook, self.db_manager)
-        book_frame.pack(fill="both", expand=True)
-        notebook.add(book_frame, text="📚 Libros / Préstamos")
+        # Pestaña de Libros
+        book_frame = BookView(self.notebook, self.db_manager)
+        self.notebook.add(book_frame, text="📚 Libros / Préstamos")
 
-        # 2. Pestaña de Usuarios
-        user_frame = UserView(notebook, self.db_manager)
-        user_frame.pack(fill="both", expand=True)
-        notebook.add(user_frame, text="👤 Usuarios")
+        # Pestaña de Usuarios
+        user_frame = UserView(self.notebook, self.db_manager)
+        self.notebook.add(user_frame, text="👤 Usuarios")
 
-        # 3. Pestaña de Historial
-        history_frame = HistoryView(notebook, self.db_manager)
-        history_frame.pack(fill="both", expand=True)
-        notebook.add(history_frame, text="📜 Historial")
+        # Pestaña de Historial
+        history_frame = HistoryView(self.notebook, self.db_manager)
+        self.notebook.add(history_frame, text="📜 Historial")
+
+
+    def reload_notebook(self):
+        """Recarga todas las pestañas."""
+        self.create_notebook()
+        messagebox.showinfo("Recarga", "Vistas recargadas correctamente.")
+
 
     def on_closing(self):
         """Maneja el cierre de la ventana principal y cierra la conexión DB."""
         if messagebox.askokcancel("Salir", "¿Estás seguro de que deseas salir?"):
-            if self.db_manager:
-                self.db_manager.close()
-                print("Conexión a la base de datos cerrada.")
+            if self.db_manager: self.db_manager.close_db()
             self.destroy()
 
 if __name__ == '__main__':

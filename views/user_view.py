@@ -1,68 +1,89 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from clases.users import User
 
-class UserView(tk.Frame):
-    """Interfaz para Crear y Listar Usuarios."""
-    def __init__(self, master, db_manager):
+class AddUserModal(tk.Toplevel):
+    """Ventana modal para el formulario de crear usuario."""
+    def __init__(self, master, db_manager, callback_on_success=None):
         super().__init__(master)
-        self.user_manager = User(db_manager)
-        
-        self.username_var = tk.StringVar()
-        self.password_var = tk.StringVar()
-        
-        self.create_widgets()
-        self.load_users()
+        self.title("👤 Crear Nuevo Usuario"); self.transient(master); self.grab_set()
+        self.user_manager = User(db_manager); self.callback_on_success = callback_on_success
+        self.username_var = tk.StringVar(); self.password_var = tk.StringVar()
+        self.create_widgets(); self.focus_set()
+
 
     def create_widgets(self):
-        # Frame para el formulario de creación
-        form_frame = tk.LabelFrame(self, text="Crear Usuario", padx=10, pady=10)
-        form_frame.pack(padx=10, pady=10, fill="x")
+        main_frame = ttk.Frame(self, padding="15"); main_frame.pack(fill="both", expand=True)
+        ttk.Label(main_frame, text="Username:").grid(row=0, column=0, sticky="w", pady=5)
+        ttk.Entry(main_frame, textvariable=self.username_var, width=30).grid(row=0, column=1, padx=10, pady=5)
+        ttk.Label(main_frame, text="Password:").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Entry(main_frame, textvariable=self.password_var, show="*", width=30).grid(row=1, column=1, padx=10, pady=5)
+        ttk.Button(main_frame, text="✅ Registrar Usuario", command=self.create_user_ui, style='Accent.TButton').grid(
+            row=2, column=0, columnspan=2, pady=15, sticky="ew")
 
-        tk.Label(form_frame, text="Username:").grid(row=0, column=0, sticky="w", pady=5)
-        tk.Entry(form_frame, textvariable=self.username_var, width=30).grid(row=0, column=1, padx=5, pady=5)
-        
-        tk.Label(form_frame, text="Password:").grid(row=1, column=0, sticky="w", pady=5)
-        tk.Entry(form_frame, textvariable=self.password_var, show="*", width=30).grid(row=1, column=1, padx=5, pady=5)
-        
-        tk.Button(form_frame, text="Crear y Listar", command=self.create_user_ui, 
-                  bg="#4CAF50", fg="white").grid(row=2, column=0, columnspan=2, pady=10)
 
-        # Frame para el listado
-        list_frame = tk.LabelFrame(self, text="Usuarios Registrados (ID | Username)", padx=10, pady=5)
-        list_frame.pack(padx=10, pady=10, fill="both", expand=True)
-        
-        self.users_listbox = tk.Listbox(list_frame, height=15, width=50)
-        self.users_listbox.pack(side=tk.LEFT, fill="both", expand=True)
-        
-        # Scrollbar
-        scrollbar = tk.Scrollbar(list_frame, command=self.users_listbox.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.users_listbox.config(yscrollcommand=scrollbar.set)
-    
     def create_user_ui(self):
-        username = self.username_var.get()
-        password = self.password_var.get()
-        
-        if not username or not password:
-            messagebox.showerror("Error", "Ambos campos son obligatorios.")
-            return
+        username = self.username_var.get().strip(); password = self.password_var.get().strip()
+        if not username or not password: messagebox.showerror("Error", "Ambos campos son obligatorios.", parent=self); return
 
         if self.user_manager.create_user(username, password):
-            messagebox.showinfo("Éxito", f"Usuario '{username}' creado.")
-            self.username_var.set("")
-            self.password_var.set("")
-            self.load_users()
+            messagebox.showinfo("Éxito", f"Usuario '{username}' creado.", parent=self)
+            self.username_var.set(""); self.password_var.set("")
+            if self.callback_on_success: self.callback_on_success()
+            self.destroy()
         else:
-            messagebox.showerror("Error", "No se pudo crear el usuario (posiblemente ya existe).")
+            messagebox.showerror("Error", "No se pudo crear el usuario (posiblemente ya existe).", parent=self)
+
+
+class UserView(tk.Frame):
+    """Interfaz principal para gestionar usuarios."""
+    def __init__(self, master, db_manager):
+        super().__init__(master); self.db_manager = db_manager; self.user_manager = User(db_manager)
+        self.auth_user_var = tk.StringVar(); self.auth_pass_var = tk.StringVar()
+        self.create_widgets(); self.load_users()
+
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="10"); main_frame.pack(fill="both", expand=True)
+        control_frame = ttk.Frame(main_frame); control_frame.pack(fill="x", pady=10)
+        ttk.Button(control_frame, text="➕ Nuevo Usuario", command=self.open_add_user_modal).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="🔄 Recargar Usuarios", command=self.load_users).pack(side=tk.LEFT, padx=5)
+
+        auth_frame = ttk.LabelFrame(main_frame, text="Probar Autenticación", padding="10"); auth_frame.pack(fill="x", pady=10)
+        ttk.Label(auth_frame, text="Username:").grid(row=0, column=0, padx=5, sticky="w")
+        ttk.Entry(auth_frame, textvariable=self.auth_user_var, width=20).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(auth_frame, text="Password:").grid(row=1, column=0, padx=5, sticky="w")
+        ttk.Entry(auth_frame, textvariable=self.auth_pass_var, show="*", width=20).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(auth_frame, text="🔑 Autenticar", command=self.authenticate_ui, style='Accent.TButton').grid(row=0, column=2, rowspan=2, padx=15, sticky="ns")
+        
+        self.users_tree = self._setup_treeview(main_frame); self.users_tree.pack(fill="both", expand=True, pady=5)
+
+
+    def _setup_treeview(self, parent_frame):
+        columns = ("ID", "Username"); tree = ttk.Treeview(parent_frame, columns=columns, show="headings", selectmode="browse")
+        tree.heading("ID", text="ID", anchor=tk.CENTER); tree.column("ID", width=80, anchor=tk.CENTER)
+        tree.heading("Username", text="Username"); tree.column("Username", width=250)
+        return tree
+
+
+    def open_add_user_modal(self): AddUserModal(self.master, self.db_manager, self.load_users)
+
+
+    def authenticate_ui(self):
+        username = self.auth_user_var.get().strip(); password = self.auth_pass_var.get().strip()
+        if not username or not password: messagebox.showerror("Error", "Ingrese usuario y contraseña para autenticar."); return
+        user_id = self.user_manager.authenticate(username, password)
+        
+        if user_id:
+            messagebox.showinfo("Autenticación Exitosa", f"¡Bienvenido, {username}! ID: {user_id}")
+            self.auth_user_var.set(""); self.auth_pass_var.set("")
+        else:
+            messagebox.showerror("Autenticación Fallida", "Usuario o contraseña incorrectos.")
+
 
     def load_users(self):
-        self.users_listbox.delete(0, tk.END)
+        for item in self.users_tree.get_children(): self.users_tree.delete(item)
         users = self.user_manager.list_users()
         
-        if not users:
-             self.users_listbox.insert(tk.END, "No hay usuarios registrados.")
-             return
-
-        for user in users:
-            self.users_listbox.insert(tk.END, f"{user[0]:<5} | {user[1]}")
+        if not users: self.users_tree.insert("", tk.END, values=("—", "No hay usuarios registrados.")); return
+        for user in users: self.users_tree.insert("", tk.END, values=(user[0], user[1]))
