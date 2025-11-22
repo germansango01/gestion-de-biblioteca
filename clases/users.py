@@ -1,32 +1,55 @@
-from clases.database import DatabaseManager
+import bcrypt
+from clases.database import DatabaseManager 
 
 class User:
-    """Clase para gestionar usuarios de la biblioteca, incluyendo la creación y autenticación."""
+    """Clase para gestionar usuarios (creación, autenticación y seguridad)."""
 
     def __init__(self, db: DatabaseManager):
         """
-        Inicializa el gestor de usuarios.
+        Inicializar con el gestor de base de datos.
 
         Args:
-            db (DatabaseManager): Instancia del gestor de base de datos.
+            db (DatabaseManager): Instancia de DatabaseManager.
         """
         self.db = db
 
 
+    def _hash_password(self, password: str) -> bytes:
+        """
+        Generar un hash seguro con bcrypt. 
+        Return: Hash de bcrypt.
+        """
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(password.encode('utf-8'), salt)
+
+
+    def _verify_password(self, password: str, password_hash: bytes | str) -> bool:
+        """
+        Verificar si la contraseña coincide con el hash. 
+        Return: True si coinciden, False en caso contrario.
+        """
+        try:
+            if isinstance(password_hash, str):
+                password_hash = password_hash.encode('latin-1') 
+            return bcrypt.checkpw(password.encode('utf-8'), password_hash)
+        except Exception:
+            return False
+
+
     def create_user(self, username: str, password: str) -> bool:
         """
-        Crea un nuevo usuario con la contraseña hasheada.
+        Crear un nuevo usuario.
 
         Args:
             username (str): Nombre de usuario único.
-            password (str): Contraseña en texto plano.
+            password (str): Contraseña.
 
-        Returns:
-            bool: True si se creó correctamente, False si falla (por duplicidad o error de DB).
+        Return:
+            bool: True si se creó, False si falla.
         """
-        password_hash = self.db.hash_password(password)
+        password_hash = self._hash_password(password)
         
-        result = self.db.execute(
+        result: int | bool = self.db.insert(
             "INSERT INTO users (username, password_hash) VALUES (?, ?);",
             (username, password_hash)
         )
@@ -35,37 +58,37 @@ class User:
 
     def authenticate(self, username: str, password: str) -> int | None:
         """
-        Autentica un usuario.
+        Autenticar un usuario.
 
         Args:
             username (str): Nombre de usuario.
-            password (str): Contraseña en texto plano.
+            password (str): Contraseña.
 
-        Returns:
-            int | None: El ID del usuario si la autenticación es exitosa, None en caso contrario.
+        Return:
+            int | None: ID del usuario si tiene éxito, None en caso contrario.
         """
-        # (fetch_one=True)
-        result = self.db.execute(
+        result: tuple | None = self.db.select_one(
             "SELECT id, password_hash FROM users WHERE username = ?;",
-            (username,),
-            fetch_one=True
+            (username,)
         )
         
-        if result:
+        if result and isinstance(result, tuple):
             user_id = result[0]
             password_hash = result[1]
             
-            if self.db.verify_password(password, password_hash):
-                return user_id
+            if self._verify_password(password, password_hash):
+                return user_id 
         
         return None
 
 
     def list_users(self) -> list:
         """
-        Lista todos los usuarios.
+        Listar todos los usuarios.
 
-        Returns:
+        Return:
             list: Lista de tuplas con (id, username).
         """
-        return self.db.execute("SELECT id, username FROM users ORDER BY id ASC;")
+        return self.db.select_all(
+            "SELECT id, username FROM users ORDER BY id ASC;"
+        )

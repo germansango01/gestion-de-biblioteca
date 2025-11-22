@@ -16,7 +16,7 @@ class LibraryApp(tk.Tk):
         self.geometry("900x650")
         
         # Configuración de estilo TTK
-        style = ttk.Style(self) # <-- Ya no se guarda como self.style
+        style = ttk.Style(self)
         style.theme_use('clam')
         # Estilo principal
         style.configure('Accent.TButton', background='#2196F3', foreground='white', borderwidth=0)
@@ -24,7 +24,7 @@ class LibraryApp(tk.Tk):
 
         self.db_manager = None
         
-        if self._connect_db():
+        if self._connectect_db():
             self.create_menu()
             self.create_notebook()
         else:
@@ -32,12 +32,12 @@ class LibraryApp(tk.Tk):
             self.quit()
 
 
-    def _connect_db(self):
+    def _connectect_db(self):
         """Intenta conectar con la base de datos y establece la conexión."""
         self.db_manager = DatabaseManager(db_name=DB_NAME)
         self.db_manager.connect_db()
-        # Nota: Asegúrate de eliminar el archivo library.db para que la columna author_id se cree
-        return self.db_manager._conn is not None
+
+        return self.db_manager._connect is not None
 
 
     def create_menu(self):
@@ -86,7 +86,8 @@ class LibraryApp(tk.Tk):
     def on_closing(self):
         """Maneja el cierre de la ventana principal y cierra la conexión DB."""
         if messagebox.askokcancel("Salir", "¿Estás seguro de que deseas salir?"):
-            if self.db_manager: self.db_manager.close_db()
+            if self.db_manager:
+                self.db_manager.close_db()
             self.destroy()
 
 if __name__ == '__main__':

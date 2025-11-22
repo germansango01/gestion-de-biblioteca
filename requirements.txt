@@ -1,0 +1,5 @@
+bcrypt
+fpdf2
+numpy
+matplotlib
+pandas

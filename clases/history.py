@@ -1,11 +1,11 @@
 from clases.database import DatabaseManager
 
 class History:
-    """Clase para gestionar el historial de préstamos de libros."""
+    """Clase para gestionar el historial de préstamos y las consultas de préstamos activos."""
 
     def __init__(self, db: DatabaseManager):
         """
-        Inicializa el gestor de historial.
+        Inicializar con el gestor de base de datos.
 
         Args:
             db (DatabaseManager): Instancia del gestor de base de datos.
@@ -15,12 +15,12 @@ class History:
 
     def get_loans(self, user_id: int | None = None) -> list:
         """
-        Obtiene el historial completo de préstamos, opcionalmente filtrado por usuario.
+        Obtener el historial completo de préstamos, opcionalmente filtrado por usuario.
 
         Args:
-            user_id (int | None, optional): ID del usuario para filtrar préstamos.
+            user_id (int | None): ID del usuario para filtrar.
 
-        Returns:
+        Return:
             list: Lista de préstamos.
         """
         query = """
@@ -36,16 +36,15 @@ class History:
             params = (user_id,)
             
         query += " ORDER BY l.loan_date DESC"
-
-        return self.db.execute(query, params)
+        return self.db.select_all(query, params)
 
 
     def get_active_loans(self) -> list:
         """
-        Obtiene una lista de todos los préstamos que aún no han sido devueltos.
+        Obtener una lista de todos los préstamos que aún no han sido devueltos.
 
-        Returns:
-            list: Lista de préstamos activos con (loan_id, book_title, username, loan_date).
+        Return:
+            list: Lista de préstamos activos.
         """
         query = """
             SELECT l.id, b.title, u.username, l.loan_date
@@ -55,4 +54,4 @@ class History:
             WHERE l.return_date IS NULL
             ORDER BY l.loan_date ASC
         """
-        return self.db.execute(query)
+        return self.db.select_all(query)
