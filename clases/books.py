@@ -77,6 +77,7 @@ class Book:
         
         return True
 
+
     def return_book(self, book_id):
         """Devuelve un libro prestado. Retorna bool."""
         try:
@@ -98,3 +99,12 @@ class Book:
             
         except Exception:
             return False
+
+
+def find_active_loan_by_user_id(self, user_id):
+        """Obtiene el ID del libro más reciente prestado por un usuario que aún no ha devuelto."""
+        result = self.db.select_one(
+            "SELECT book_id FROM loans WHERE user_id = ? AND return_date IS NULL ORDER BY loan_date DESC LIMIT 1;",
+            (user_id,)
+        )
+        return result[0] if result else None

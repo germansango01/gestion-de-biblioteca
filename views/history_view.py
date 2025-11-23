@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
+# Asumo que las clases History y DatabaseManager están en la carpeta 'clases'
 from clases.history import History
-from clases.database import DatabaseManager 
+from clases.database import DatabaseManager
 
 class HistoryView(tk.Frame):
     """Interfaz principal para ver el historial de préstamos."""
@@ -12,11 +13,10 @@ class HistoryView(tk.Frame):
         self.history_manager = History(db_manager)
         
         self.user_search_var = tk.StringVar()
-        self.is_active_only = tk.BooleanVar(value=True) # Mostrar solo activos por defecto
+        self.is_active_only = tk.BooleanVar(value=True)
         
         self.create_widgets()
         self.load_history()
-
 
     def create_widgets(self):
         main_frame = ttk.Frame(self, padding="10"); main_frame.pack(fill="both", expand=True)
@@ -26,45 +26,52 @@ class HistoryView(tk.Frame):
         ttk.Entry(filter_frame, textvariable=self.user_search_var, width=20).pack(side=tk.LEFT, padx=5)
         
         ttk.Checkbutton(filter_frame, text="Solo Activos", variable=self.is_active_only, 
-                         command=self.load_history).pack(side=tk.LEFT, padx=15)
+                        command=self.load_history).pack(side=tk.LEFT, padx=15)
 
         ttk.Button(filter_frame, text="🔍 Buscar/Refrescar", command=self.load_history, style='Accent.TButton').pack(side=tk.LEFT, padx=5)
         
         self.history_tree = self._setup_treeview(main_frame); self.history_tree.pack(fill="both", expand=True, pady=5)
 
-
     def _setup_treeview(self, parent_frame):
-        columns = ("ID", "Título", "Usuario", "Préstamo", "Devolución"); tree = ttk.Treeview(parent_frame, columns=columns, show="headings")
-        tree.heading("ID", text="ID", anchor=tk.CENTER); tree.column("ID", width=50, anchor=tk.CENTER)
-        tree.heading("Título", text="Título"); tree.column("Título", width=250)
-        tree.heading("Usuario", text="Usuario"); tree.column("Usuario", width=120)
-        tree.heading("Préstamo", text="Fecha Préstamo"); tree.column("Préstamo", width=150)
-        tree.heading("Devolución", text="Fecha Devolución"); tree.column("Devolución", width=150, anchor=tk.CENTER)
-        tree.tag_configure('activo', foreground='red'); tree.tag_configure('devuelto', foreground='green')
+        columns = ("ID", "Título", "Usuario", "Préstamo", "Devolución")
+        tree = ttk.Treeview(parent_frame, columns=columns, show="headings")
+        
+        # ✅ CORRECCIÓN 3: Usar cadenas literales para 'anchor'
+        config = [("ID", 50, 'center'), ("Título", 250, 'w'), ("Usuario", 120, 'w'), 
+                ("Préstamo", 150, 'w'), ("Devolución", 150, 'center')]
+        
+        for name, width, anchor in config:
+            tree.heading(name, text=name, anchor=anchor)
+            tree.column(name, width=width, anchor=anchor)
+            
+        tree.tag_configure('activo', foreground='red')
+        tree.tag_configure('devuelto', foreground='green')
+        
+        vsb = ttk.Scrollbar(parent_frame, orient="vertical", command=tree.yview); vsb.pack(side='right', fill='y')
+        tree.configure(yscrollcommand=vsb.set)
+        
         return tree
 
-
     def load_history(self):
-        for item in self.history_tree.get_children(): self.history_tree.delete(item)
+        self.history_tree.delete(*self.history_tree.get_children())
 
         username = self.user_search_var.get().strip()
         user_id = None
         
         if username:
-            # Busca el ID del usuario (debe existir aunque esté soft-deleted)
+            # Buscar el ID (usando db_manager, se asume que DatabaseManager está en clases/)
             result = self.db_manager.select_one("SELECT id FROM users WHERE username = ?;", (username,))
-            
             if result: 
                 user_id = result[0]
             else: 
-                self.history_tree.insert("", tk.END, values=("—", f"Usuario '{username}' no encontrado.", "—", "—", "—")); 
+                self.history_tree.insert("", tk.END, values=("—", f"Usuario '{username}' no encontrado.", "—", "—", "—"))
                 return
 
-        # Si el filtro es solo activo, usamos History.get_active_loans
         if self.is_active_only.get() and user_id is None:
             history_data = self.history_manager.get_active_loans()
         else:
-            # Si hay filtro de usuario o se quieren todos los registros
+            # Si se busca por user_id, se obtienen todos sus préstamos (activos e inactivos)
+            # Si no se busca por user_id, y no es solo activo, se obtienen todos los préstamos.
             history_data = self.history_manager.get_loans(user_id=user_id)
         
         if not history_data: 
@@ -72,19 +79,17 @@ class HistoryView(tk.Frame):
             return
 
         for row in history_data:
-            # Formato esperado: (loan_id, title, username_loan, loan_date, return_date [o None])
-            
-            if len(row) >= 5:
-                loan_id, title, username_loan, loan_date, return_date = row
-            elif len(row) == 4:
-                 # Desde get_active_loans
+            # Row puede tener 4 o 5 elementos (dependiendo de si viene de get_active_loans o get_loans)
+            if len(row) == 4:
                 loan_id, title, username_loan, loan_date = row
                 return_date = None
             else:
-                 continue
+                loan_id, title, username_loan, loan_date, return_date = row
             
             is_active = return_date is None
             display_return_date = return_date if not is_active else "ACTIVO"
             tag = 'activo' if is_active else 'devuelto'
             
-            self.history_tree.insert("", tk.END, values=(loan_id, title, username_loan, loan_date, display_return_date), tags=(tag,))
+            self.history_tree.insert("", tk.END, 
+                                    values=(loan_id, title, username_loan, loan_date, display_return_date), 
+                                    tags=(tag,))

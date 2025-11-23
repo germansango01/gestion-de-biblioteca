@@ -49,3 +49,20 @@ class User:
             "UPDATE users SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL;",
             (timestamp, user_id)
         )
+
+
+def get_user_by_id(self, user_id):
+        """Obtiene un usuario activo por ID. Retorna tuple (id, username, password) o None."""
+        return self.db.select_one(
+            "SELECT id, username, password FROM users WHERE id = ? AND deleted_at IS NULL;",
+            (user_id,)
+        )
+
+
+def find_user_id_by_username(self, username):
+        """Busca el ID de un usuario activo por su username. Retorna ID (int) o None."""
+        result = self.db.select_one(
+            "SELECT id FROM users WHERE username = ? AND deleted_at IS NULL;", 
+            (username,)
+        )
+        return result[0] if result else None
