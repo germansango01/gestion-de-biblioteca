@@ -2,13 +2,14 @@ import sqlite3
 from datetime import datetime
 
 class Database:
-    """Clase para gestionar la conexión y operaciones con SQLite."""
+    """Gestión de conexión y operaciones con SQLite."""
 
     def __init__(self, db_name="library.db"):
-        """Inicializa la base de datos y las tablas.
+        """
+        Inicializa la conexión a la base de datos y crea las tablas si no existen.
 
         Args:
-            db_name (str): Nombre del archivo de base de datos SQLite.
+            db_name (str): nombre del archivo de la base de datos.
         """
         self.db_name = db_name
         self._connection = None
@@ -26,12 +27,109 @@ class Database:
             self._connection = None
 
 
-    def _execute_setup_query(self, query):
-        """Ejecuta queries de creación de tablas.
+    def insert(self, query, params=()):
+        """
+        Ejecuta un INSERT y retorna el ID de la fila insertada.
 
         Args:
-            query (str): Consulta SQL para creación de tabla.
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            int | None: ID de la fila insertada o None si falla.
         """
+        if not self._connection:
+            return None
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            self._connection.commit()
+            return cur.lastrowid
+        except sqlite3.Error:
+            return None
+
+
+    def update(self, query, params=()):
+        """
+        Ejecuta un UPDATE y retorna True/False.
+
+        Args:
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            bool: True si se ejecutó correctamente, False si falla.
+        """
+        if not self._connection:
+            return False
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            self._connection.commit()
+            return True
+        except sqlite3.Error:
+            return False
+
+
+    def delete(self, query, params=()):
+        """
+        Ejecuta un DELETE y retorna True/False.
+
+        Args:
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            bool: True si se ejecutó correctamente, False si falla.
+        """
+        return self.update(query, params)
+
+
+    def select_one(self, query, params=()):
+        """
+        Ejecuta un SELECT y retorna una fila.
+
+        Args:
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            tuple | None: fila seleccionada o None si no hay resultados.
+        """
+        if not self._connection:
+            return None
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            row = cur.fetchone()
+            return tuple(row) if row else None
+        except sqlite3.Error:
+            return None
+
+
+    def select_all(self, query, params=()):
+        """
+        Ejecuta un SELECT y retorna varias filas.
+
+        Args:
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            list: lista de tuplas con los resultados.
+        """
+        if not self._connection:
+            return []
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            return [tuple(r) for r in cur.fetchall()]
+        except sqlite3.Error:
+            return []
+
+
+    def _execute_setup_query(self, query):
+        """Ejecuta consultas de creación de tablas."""
         if not self._connection:
             return
         try:
@@ -43,7 +141,7 @@ class Database:
 
 
     def _setup_tables(self):
-        """Crea las tablas principales si no existen."""
+        """Crea las tablas 'users', 'books' y 'loans' si no existen."""
         self._execute_setup_query("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,92 +174,8 @@ class Database:
         """)
 
 
-    def insert(self, query, params=()):
-        """Ejecuta un INSERT.
-
-        Returns:
-            int | None: ID de la fila insertada o None si falla.
-        """
-        if not self._connection:
-            return None
-        try:
-            cur = self._connection.cursor()
-            cur.execute(query, params)
-            self._connection.commit()
-            return cur.lastrowid
-        except sqlite3.Error:
-            return None
-
-
-    def update(self, query, params=()):
-        """Ejecuta un UPDATE.
-
-        Returns:
-            bool: True si se ejecutó correctamente, False si falla.
-        """
-        if not self._connection:
-            return False
-        try:
-            cur = self._connection.cursor()
-            cur.execute(query, params)
-            self._connection.commit()
-            return True
-        except sqlite3.Error:
-            return False
-
-
-    def delete(self, query, params=()):
-        """Ejecuta un DELETE.
-
-        Returns:
-            bool: True si se ejecutó correctamente, False si falla.
-        """
-        if not self._connection:
-            return False
-        try:
-            cur = self._connection.cursor()
-            cur.execute(query, params)
-            self._connection.commit()
-            return True
-        except sqlite3.Error:
-            return False
-
-
-    def select_one(self, query, params=()):
-        """Ejecuta un SELECT y devuelve la primera fila.
-
-        Returns:
-            tuple | None: Primera fila como tupla o None si no existe.
-        """
-        if not self._connection:
-            return None
-        try:
-            cur = self._connection.cursor()
-            cur.execute(query, params)
-            row = cur.fetchone()
-            return tuple(row) if row else None
-        except sqlite3.Error:
-            return None
-
-
-    def select_all(self, query, params=()):
-        """Ejecuta un SELECT y devuelve todas las filas.
-
-        Returns:
-            list: Lista de tuplas con todas las filas.
-        """
-        if not self._connection:
-            return []
-        try:
-            cur = self._connection.cursor()
-            cur.execute(query, params)
-            return [tuple(r) for r in cur.fetchall()]
-        except sqlite3.Error:
-            return []
-
-
     def close(self):
-        """Cierra la conexión con la base de datos."""
+        """Cierra la conexión a la base de datos."""
         if self._connection:
             self._connection.close()
             self._connection = None
