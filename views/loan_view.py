@@ -4,71 +4,59 @@ from tkinter import messagebox
 class LoanView(ctk.CTkFrame):
     """Vista para gestionar préstamos y devoluciones de libros."""
 
-    def __init__(self, master, book_class):
+    def __init__(self, parent, book_class):
         """
         Inicializa la vista de préstamos.
 
         Args:
-            master: contenedor padre.
-            book_class (Book): instancia de la clase Book.
+            parent: frame padre donde se incrusta.
+            book_class: instancia de la clase Book.
         """
-        super().__init__(master)
+        super().__init__(parent)
         self.book_class = book_class
 
-        # Widgets
-        self.book_id_entry = ctk.CTkEntry(self, placeholder_text="ID Libro")
-        self.user_id_entry = ctk.CTkEntry(self, placeholder_text="ID Usuario")
+        # Variables
+        self.loan_book_id_var = ctk.StringVar()
+        self.loan_user_id_var = ctk.StringVar()
+
+        # Entradas
+        ctk.CTkLabel(self, text="ID Libro").grid(row=0, column=0, padx=5, pady=5)
+        self.loan_book_entry = ctk.CTkEntry(self, textvariable=self.loan_book_id_var)
+        self.loan_book_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        ctk.CTkLabel(self, text="ID Usuario").grid(row=1, column=0, padx=5, pady=5)
+        self.loan_user_entry = ctk.CTkEntry(self, textvariable=self.loan_user_id_var)
+        self.loan_user_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        # Botones
         self.lend_btn = ctk.CTkButton(self, text="Prestar Libro", command=self.lend_book)
+        self.lend_btn.grid(row=2, column=0, padx=5, pady=5)
         self.return_btn = ctk.CTkButton(self, text="Devolver Libro", command=self.return_book)
-        self.refresh_btn = ctk.CTkButton(self, text="Actualizar Lista", command=self.refresh_loans)
-        self.listbox = ctk.CTkTextbox(self, width=600, height=300)
-
-        # Layout
-        self.book_id_entry.grid(row=0, column=0, padx=5, pady=5)
-        self.user_id_entry.grid(row=0, column=1, padx=5, pady=5)
-        self.lend_btn.grid(row=1, column=0, padx=5, pady=5)
-        self.return_btn.grid(row=1, column=1, padx=5, pady=5)
-        self.refresh_btn.grid(row=1, column=2, padx=5, pady=5)
-        self.listbox.grid(row=2, column=0, columnspan=3, padx=5, pady=5)
-
-        self.refresh_loans()
+        self.return_btn.grid(row=2, column=1, padx=5, pady=5)
 
 
     def lend_book(self):
-        """Realiza un préstamo con los IDs ingresados."""
+        """Realiza préstamo de un libro a un usuario validando IDs."""
         try:
-            book_id = int(self.book_id_entry.get())
-            user_id = int(self.user_id_entry.get())
+            book_id = int(self.loan_book_id_var.get())
+            user_id = int(self.loan_user_id_var.get())
         except ValueError:
             messagebox.showerror("Error", "IDs inválidos")
             return
-
         if self.book_class.lend(book_id, user_id):
             messagebox.showinfo("Éxito", "Libro prestado")
-            self.refresh_loans()
         else:
-            messagebox.showerror("Error", "No se pudo prestar el libro")
+            messagebox.showerror("Error", "No se pudo prestar")
 
 
     def return_book(self):
-        """Registra la devolución del libro ingresado por ID."""
+        """Registra la devolución de un libro validando ID."""
         try:
-            book_id = int(self.book_id_entry.get())
+            book_id = int(self.loan_book_id_var.get())
         except ValueError:
             messagebox.showerror("Error", "ID inválido")
             return
-
         if self.book_class.return_book(book_id):
             messagebox.showinfo("Éxito", "Libro devuelto")
-            self.refresh_loans()
         else:
-            messagebox.showerror("Error", "No se pudo devolver el libro")
-
-
-    def refresh_loans(self):
-        """Actualiza la lista de préstamos activos."""
-        self.listbox.delete("1.0", "end")
-        books = self.book_class.list(available_only=False)
-        for b in books:
-            status = "Disponible" if b[5] == 1 else "Prestado"
-            self.listbox.insert("end", f"ID:{b[0]} Título:{b[1]} Estado:{status}\n")
+            messagebox.showerror("Error", "No se pudo devolver")
