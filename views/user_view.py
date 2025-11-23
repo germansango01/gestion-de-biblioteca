@@ -1,9 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 from clases.users import User
+from clases.database import DatabaseManager # Importar para tipificación
 
+# ==============================================================================
+# Modal para Crear Usuario
+# ==============================================================================
 class AddUserModal(tk.Toplevel):
     """Ventana modal para el formulario de crear usuario."""
+    
     def __init__(self, master, db_manager, callback_on_success=None):
         super().__init__(master)
         self.title("👤 Crear Nuevo Usuario"); self.transient(master); self.grab_set()
@@ -35,8 +40,12 @@ class AddUserModal(tk.Toplevel):
             messagebox.showerror("Error", "No se pudo crear el usuario (posiblemente ya existe).", parent=self)
 
 
+# ==============================================================================
+# Vista Principal de Usuarios
+# ==============================================================================
 class UserView(tk.Frame):
     """Interfaz principal para gestionar usuarios."""
+    
     def __init__(self, master, db_manager):
         super().__init__(master); self.db_manager = db_manager; self.user_manager = User(db_manager)
         self.auth_user_var = tk.StringVar(); self.auth_pass_var = tk.StringVar()
@@ -48,6 +57,7 @@ class UserView(tk.Frame):
         control_frame = ttk.Frame(main_frame); control_frame.pack(fill="x", pady=10)
         ttk.Button(control_frame, text="➕ Nuevo Usuario", command=self.open_add_user_modal).pack(side=tk.LEFT, padx=5)
         ttk.Button(control_frame, text="🔄 Recargar Usuarios", command=self.load_users).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="🗑️ Eliminar Usuario (Soft Delete)", command=self.delete_user_ui, style='Danger.TButton').pack(side=tk.LEFT, padx=5) # Botón añadido para Soft Delete
 
         auth_frame = ttk.LabelFrame(main_frame, text="Probar Autenticación", padding="10"); auth_frame.pack(fill="x", pady=10)
         ttk.Label(auth_frame, text="Username:").grid(row=0, column=0, padx=5, sticky="w")
@@ -66,12 +76,14 @@ class UserView(tk.Frame):
         return tree
 
 
-    def open_add_user_modal(self): AddUserModal(self.master, self.db_manager, self.load_users)
+    def open_add_user_modal(self): 
+        AddUserModal(self.master, self.db_manager, self.load_users)
 
 
     def authenticate_ui(self):
         username = self.auth_user_var.get().strip(); password = self.auth_pass_var.get().strip()
         if not username or not password: messagebox.showerror("Error", "Ingrese usuario y contraseña para autenticar."); return
+        
         user_id = self.user_manager.authenticate(username, password)
         
         if user_id:
@@ -81,8 +93,31 @@ class UserView(tk.Frame):
             messagebox.showerror("Autenticación Fallida", "Usuario o contraseña incorrectos.")
 
 
+    def delete_user_ui(self):
+        """Maneja el Soft Delete del usuario seleccionado."""
+        selected_item = self.users_tree.focus()
+        if not selected_item:
+            messagebox.showwarning("Advertencia", "Seleccione un usuario para eliminar.")
+            return
+
+        user_values = self.users_tree.item(selected_item, 'values')
+        user_id = int(user_values[0])
+        username = user_values[1]
+
+        if messagebox.askyesno("Confirmar Eliminación (Soft Delete)", 
+                            f"¿Está seguro de marcar como eliminado al usuario '{username}'?\n"
+                            "El historial de préstamos se preservará."):
+            
+            if self.user_manager.delete_user(user_id):
+                messagebox.showinfo("Éxito", f"Usuario '{username}' marcado como eliminado.")
+                self.load_users()
+            else:
+                messagebox.showerror("Error", "No se pudo marcar el usuario como eliminado.")
+
+
     def load_users(self):
         for item in self.users_tree.get_children(): self.users_tree.delete(item)
+        
         users = self.user_manager.list_users()
         
         if not users: self.users_tree.insert("", tk.END, values=("—", "No hay usuarios registrados.")); return

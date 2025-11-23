@@ -1,33 +1,23 @@
 from clases.database import DatabaseManager
 
 class History:
-    """Clase para gestionar el historial de préstamos y las consultas de préstamos activos."""
+    """Clase para gestionar el historial de préstamos."""
 
     def __init__(self, db: DatabaseManager):
-        """
-        Inicializar con el gestor de base de datos.
-
-        Args:
-            db (DatabaseManager): Instancia del gestor de base de datos.
-        """
         self.db = db
 
-
-    def get_loans(self, user_id: int | None = None) -> list:
-        """
-        Obtener el historial completo de préstamos, opcionalmente filtrado por usuario.
-
-        Args:
-            user_id (int | None): ID del usuario para filtrar.
-
-        Return:
-            list: Lista de préstamos.
-        """
+    def get_loans(self, user_id=None):
+        """Obtiene el historial completo. Retorna list."""
         query = """
-            SELECT l.id, b.title, u.username, l.loan_date, l.return_date
+            SELECT 
+                l.id, 
+                b.title AS title, 
+                u.username AS username, 
+                l.loan_date, 
+                l.return_date
             FROM loans l
-            JOIN books b ON l.book_id = b.id
-            JOIN users u ON l.user_id = u.id
+            LEFT JOIN books b ON l.book_id = b.id
+            LEFT JOIN users u ON l.user_id = u.id
         """
         params = ()
         
@@ -39,18 +29,17 @@ class History:
         return self.db.select_all(query, params)
 
 
-    def get_active_loans(self) -> list:
-        """
-        Obtener una lista de todos los préstamos que aún no han sido devueltos.
-
-        Return:
-            list: Lista de préstamos activos.
-        """
+    def get_active_loans(self):
+        """Obtiene una lista de todos los préstamos que aún no han sido devueltos. Retorna list."""
         query = """
-            SELECT l.id, b.title, u.username, l.loan_date
+            SELECT 
+                l.id, 
+                b.title AS title,
+                u.username AS username,
+                l.loan_date
             FROM loans l
-            JOIN books b ON l.book_id = b.id
-            JOIN users u ON l.user_id = u.id
+            INNER JOIN books b ON l.book_id = b.id
+            INNER JOIN users u ON l.user_id = u.id
             WHERE l.return_date IS NULL
             ORDER BY l.loan_date ASC
         """

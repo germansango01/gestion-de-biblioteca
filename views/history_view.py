@@ -1,13 +1,21 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from clases.history import History
+from clases.database import DatabaseManager 
 
 class HistoryView(tk.Frame):
     """Interfaz principal para ver el historial de préstamos."""
+    
     def __init__(self, master, db_manager):
-        super().__init__(master); self.db_manager = db_manager; self.history_manager = History(db_manager)
-        self.user_search_var = tk.StringVar(); self.is_active_only = tk.BooleanVar(value=True)
-        self.create_widgets(); self.load_history()
+        super().__init__(master)
+        self.db_manager = db_manager
+        self.history_manager = History(db_manager)
+        
+        self.user_search_var = tk.StringVar()
+        self.is_active_only = tk.BooleanVar(value=True) # Mostrar solo activos por defecto
+        
+        self.create_widgets()
+        self.load_history()
 
 
     def create_widgets(self):
@@ -18,7 +26,7 @@ class HistoryView(tk.Frame):
         ttk.Entry(filter_frame, textvariable=self.user_search_var, width=20).pack(side=tk.LEFT, padx=5)
         
         ttk.Checkbutton(filter_frame, text="Solo Activos", variable=self.is_active_only, 
-                        command=self.load_history).pack(side=tk.LEFT, padx=15)
+                         command=self.load_history).pack(side=tk.LEFT, padx=15)
 
         ttk.Button(filter_frame, text="🔍 Buscar/Refrescar", command=self.load_history, style='Accent.TButton').pack(side=tk.LEFT, padx=5)
         
@@ -39,35 +47,44 @@ class HistoryView(tk.Frame):
     def load_history(self):
         for item in self.history_tree.get_children(): self.history_tree.delete(item)
 
-        user_id = None; username = self.user_search_var.get().strip(); active_only = self.is_active_only.get()
-
-        if username:
-            # Usar la DB directamente para verificar el ID del usuario
-            result = self.db_manager.execute("SELECT id FROM users WHERE username = ?", (username,), fetch_one=True)
-            if result: user_id = result[0]
-            else: self.history_tree.insert("", tk.END, values=("—", f"Usuario '{username}' no encontrado.", "—", "—", "—")); return
-
-        query = """
-            SELECT l.id, b.title, u.username, l.loan_date, l.return_date
-            FROM loans l JOIN books b ON l.book_id = b.id JOIN users u ON l.user_id = u.id
-        """
-        params = []; conditions = []
-
-        if active_only: conditions.append("l.return_date IS NULL")
-        if user_id is not None: conditions.append("l.user_id = ?"); params.append(user_id)
+        username = self.user_search_var.get().strip()
+        user_id = None
         
-        if conditions: query += " WHERE " + " AND ".join(conditions)
-        query += " ORDER BY l.loan_date DESC"
+        if username:
+            # Busca el ID del usuario (debe existir aunque esté soft-deleted)
+            result = self.db_manager.select_one("SELECT id FROM users WHERE username = ?;", (username,))
+            
+            if result: 
+                user_id = result[0]
+            else: 
+                self.history_tree.insert("", tk.END, values=("—", f"Usuario '{username}' no encontrado.", "—", "—", "—")); 
+                return
 
-        history_data = self.db_manager.execute(query, tuple(params))
-
-        if history_data is False or not history_data: 
-            self.history_tree.insert("", tk.END, values=("—", "No hay registros que coincidan con el filtro.", "—", "—", "—")); return
+        # Si el filtro es solo activo, usamos History.get_active_loans
+        if self.is_active_only.get() and user_id is None:
+            history_data = self.history_manager.get_active_loans()
+        else:
+            # Si hay filtro de usuario o se quieren todos los registros
+            history_data = self.history_manager.get_loans(user_id=user_id)
+        
+        if not history_data: 
+            self.history_tree.insert("", tk.END, values=("—", "No hay registros que coincidan con el filtro.", "—", "—", "—")); 
+            return
 
         for row in history_data:
-            loan_id, title, username_loan, loan_date, return_date = row
+            # Formato esperado: (loan_id, title, username_loan, loan_date, return_date [o None])
+            
+            if len(row) >= 5:
+                loan_id, title, username_loan, loan_date, return_date = row
+            elif len(row) == 4:
+                 # Desde get_active_loans
+                loan_id, title, username_loan, loan_date = row
+                return_date = None
+            else:
+                 continue
+            
             is_active = return_date is None
             display_return_date = return_date if not is_active else "ACTIVO"
             tag = 'activo' if is_active else 'devuelto'
+            
             self.history_tree.insert("", tk.END, values=(loan_id, title, username_loan, loan_date, display_return_date), tags=(tag,))
-

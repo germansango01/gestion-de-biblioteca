@@ -1,94 +1,51 @@
 import bcrypt
-from clases.database import DatabaseManager 
+from datetime import datetime
+from clases.database import DatabaseManager
 
 class User:
-    """Clase para gestionar usuarios (creación, autenticación y seguridad)."""
+    """Clase para gestionar usuarios (CRUD y Autenticación)."""
 
     def __init__(self, db: DatabaseManager):
-        """
-        Inicializar con el gestor de base de datos.
-
-        Args:
-            db (DatabaseManager): Instancia de DatabaseManager.
-        """
         self.db = db
 
 
-    def _hash_password(self, password: str) -> bytes:
-        """
-        Generar un hash seguro con bcrypt. 
-        Return: Hash de bcrypt.
-        """
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode('utf-8'), salt)
-
-
-    def _verify_password(self, password: str, password_hash: bytes | str) -> bool:
-        """
-        Verificar si la contraseña coincide con el hash. 
-        Return: True si coinciden, False en caso contrario.
-        """
-        try:
-            if isinstance(password_hash, str):
-                password_hash = password_hash.encode('latin-1') 
-            return bcrypt.checkpw(password.encode('utf-8'), password_hash)
-        except Exception:
-            return False
-
-
-    def create_user(self, username: str, password: str) -> bool:
-        """
-        Crear un nuevo usuario.
-
-        Args:
-            username (str): Nombre de usuario único.
-            password (str): Contraseña.
-
-        Return:
-            bool: True si se creó, False si falla.
-        """
-        password_hash = self._hash_password(password)
+    def create_user(self, username, password):
+        """Crea un nuevo usuario (activo). Retorna bool."""
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        result: int | bool = self.db.insert(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?);",
-            (username, password_hash)
+        # insert() devuelve ID (int) o False
+        result = self.db.insert(
+            "INSERT INTO users (username, password) VALUES (?, ?);",
+            (username, hashed_password)
         )
         return result is not False
 
 
-    def authenticate(self, username: str, password: str) -> int | None:
-        """
-        Autenticar un usuario.
+    def list_users(self):
+        """Lista solo usuarios activos (deleted_at IS NULL). Retorna list."""
+        return self.db.select_all("SELECT id, username FROM users WHERE deleted_at IS NULL ORDER BY username ASC")
 
-        Args:
-            username (str): Nombre de usuario.
-            password (str): Contraseña.
 
-        Return:
-            int | None: ID del usuario si tiene éxito, None en caso contrario.
-        """
-        result: tuple | None = self.db.select_one(
-            "SELECT id, password_hash FROM users WHERE username = ?;",
+    def authenticate(self, username, password):
+        """Autentica solo usuarios activos. Retorna ID (int) o None."""
+        # select_one() devuelve tuple o None
+        user_data = self.db.select_one(
+            "SELECT id, password FROM users WHERE username = ? AND deleted_at IS NULL;",
             (username,)
         )
         
-        if result and isinstance(result, tuple):
-            user_id = result[0]
-            password_hash = result[1]
-            
-            if self._verify_password(password, password_hash):
-                return user_id 
-        
+        if user_data:
+            user_id, hashed_password = user_data
+            if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+                return user_id
         return None
 
 
-    def list_users(self) -> list:
-        """
-        Listar todos los usuarios.
-
-        Return:
-            list: Lista de tuplas con (id, username).
-        """
-        return self.db.select_all(
-            "SELECT id, username FROM users ORDER BY id ASC;"
+    def delete_user(self, user_id):
+        """Realiza un soft delete de un usuario. Retorna bool."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # update_delete() devuelve True o False
+        return self.db.update_delete(
+            "UPDATE users SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL;",
+            (timestamp, user_id)
         )
