@@ -1,6 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
-import tkinter.ttk as ttk
+from tkinter import ttk, messagebox
 from clases.database import Database
 from views.user_view import UserView
 from views.book_view import BookView
@@ -15,7 +15,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Sistema de Gestión de Biblioteca")
-        self.geometry("1000x500") 
+        self.geometry("900x650")
         
         # Configuración de CustomTkinter
         ctk.set_appearance_mode("Light")
@@ -37,23 +37,25 @@ class App(ctk.CTk):
         # Crear las pestañas
         self._create_tabs()
 
+
     def _setup_treeview_style(self):
         """
-        Aplica un estilo básico al Treeview de Tkinter.
+        Aplica un estilo uniforme a todos los Treeviews de la aplicación.
         """
         style = ttk.Style()
-        
-        # Tema general para el Treeview (fondo, color de línea)
         style.theme_use("default")
         
-        # Estilo para los encabezados de las columnas (headings)
+        # Encabezados
         style.configure("Treeview.Heading", 
                         font=("Arial", 11, "bold"), 
                         background="#3A7EBf",
                         foreground="white",
                         padding=[5, 5])
+        style.map("Treeview.Heading", 
+                background=[('active', '#D6D6D6')], 
+                foreground=[('active', 'black')])
         
-        # Estilo para las filas
+        # Filas
         style.configure("Treeview",
                         font=("Arial", 10),
                         rowheight=25,
@@ -61,85 +63,54 @@ class App(ctk.CTk):
                         background="#FFFFFF",
                         foreground="#000000")
         
-        # Estilo para la selección
+        # Selección
         style.map("Treeview", 
                 background=[('selected', "#1f6aa5")],
                 foreground=[('selected', 'white')])
-        
-        # Estilo para el hover en los encabezados (Heading)
-        style.map("Treeview.Heading", 
-                background=[('active', '#D6D6D6')], 
-                foreground=[('active', 'black')])
 
 
     def _create_menu(self):
-        """
-        Crea la barra de menú estándar de Tkinter y la asocia a la ventana.
-        """
-        # Crear el objeto Menú principal
-        menubar = tk.Menu(self) 
-        
-        # Asignar la barra de menú a la ventana
+        """Crea la barra de menú estándar de Tkinter."""
+        menubar = tk.Menu(self)
         self.config(menu=menubar)
 
-        # Menú Archivo
+        # Archivo
         file_menu = tk.Menu(menubar, tearoff=0)
-        # Añadir el submenú "Salir"
-        file_menu.add_command(label="Salir", command=self.on_closing) 
-        # Añadir el Menú Archivo a la barra principal
+        file_menu.add_command(label="Salir", command=self.on_closing)
         menubar.add_cascade(label="Archivo", menu=file_menu)
 
-        # Menú Ayuda
+        # Ayuda
         help_menu = tk.Menu(menubar, tearoff=0)
-        # Añadir el submenú "Acerca de"
         help_menu.add_command(label="Acerca de...", command=self._show_about_dialog)
-        # Añadir el Menú Ayuda a la barra principal
         menubar.add_cascade(label="Ayuda", menu=help_menu)
 
 
-    def _show_about_dialog():
-        pass
+    def _show_about_dialog(self):
+        messagebox.showinfo("Acerca de", "Sistema de Gestión de Biblioteca\nDesarrollado con Python y CustomTkinter")
 
 
     def _create_tabs(self):
-        """
-        Crea las pestañas y carga las vistas.
-        """
-        
-        # Configurar la disposición en grid para las pestañas
-        for tab_name in ["Libros", "Usuarios", "Préstamos y Devoluciones", "Historial", "Estadisticas"]:
+        """Crea las pestañas y carga las vistas unificadas."""
+        tabs = ["Libros", "Usuarios", "Préstamos y Devoluciones", "Historial", "Estadísticas"]
+        for tab_name in tabs:
             tab = self.tabview.add(tab_name)
             tab.grid_rowconfigure(0, weight=1)
             tab.grid_columnconfigure(0, weight=1)
 
-        # Pestaña Libros
-        book_tab = self.tabview.tab("Libros")
-        BookView(book_tab, self.db).grid(row=0, column=0, sticky="nsew")
-
-        # Pestaña usuarios
-        user_tab = self.tabview.tab("Usuarios")
-        UserView(user_tab, self.db).grid(row=0, column=0, sticky="nsew")
-        
-        # Pestaña Prestamos
-        loan_tab = self.tabview.tab("Préstamos y Devoluciones")
-        LoanView(loan_tab, self.db).grid(row=0, column=0, sticky="nsew")
-
-        # Pestaña Historial
-        history_tab = self.tabview.tab("Historial")
-        HistoryView(history_tab, self.db).grid(row=0, column=0, sticky="nsew")
-
-        # Pestaña Estadisticas
-        statistic_tab = self.tabview.tab("Estadisticas")
-        StatisticsView(statistic_tab, self.db).grid(row=0, column=0, sticky="nsew")
+        # Cargar vistas
+        BookView(self.tabview.tab("Libros"), self.db).grid(row=0, column=0, sticky="nsew")
+        UserView(self.tabview.tab("Usuarios"), self.db).grid(row=0, column=0, sticky="nsew")
+        LoanView(self.tabview.tab("Préstamos y Devoluciones"), self.db).grid(row=0, column=0, sticky="nsew")
+        HistoryView(self.tabview.tab("Historial"), self.db).grid(row=0, column=0, sticky="nsew")
+        StatisticsView(self.tabview.tab("Estadísticas"), self.db).grid(row=0, column=0, sticky="nsew")
 
 
     def on_closing(self):
-        """
-        Cierra la conexión a la base de datos al cerrar la aplicación.
-        """
+        """Cierra la conexión a la base de datos al cerrar la aplicación."""
         if self.db:
             self.db.close()
         self.destroy()
+
 
 if __name__ == "__main__":
     app = App()
