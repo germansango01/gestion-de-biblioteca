@@ -1,30 +1,50 @@
+import tkinter as tk
+from tkinter import ttk
 import customtkinter as ctk
 
 class HistoryView(ctk.CTkFrame):
-    """Vista para mostrar el historial completo de préstamos."""
+    """Vista historial usando Treeview para presentación tipo tabla."""
 
     def __init__(self, parent, history_class):
         """
-        Inicializa la vista de historial.
-
         Args:
-            parent: frame padre donde se incrusta.
+            parent: contenedor padre.
             history_class: instancia de la clase History.
         """
         super().__init__(parent)
         self.history_class = history_class
 
-        # Lista del historial
-        self.history_listbox = ctk.CTkTextbox(self, width=700, height=500)
-        self.history_listbox.pack(padx=5, pady=5)
+        toolbar = ctk.CTkFrame(self)
+        toolbar.pack(fill="x", padx=8, pady=(6, 0))
+        ctk.CTkButton(toolbar, text="Refrescar", command=self.render_table).pack(side="right", padx=6)
 
-        self.refresh_history()
+        table_frame = ctk.CTkFrame(self)
+        table_frame.pack(fill="both", expand=True, padx=8, pady=8)
 
+        self.tree = ttk.Treeview(table_frame, columns=("title", "user", "loan", "return"), show="headings")
+        self.tree.heading("title", text="Título")
+        self.tree.heading("user", text="Usuario")
+        self.tree.heading("loan", text="Prestado")
+        self.tree.heading("return", text="Devuelto")
+        self.tree.column("title", width=320, anchor="w")
+        self.tree.column("user", width=140, anchor="w")
+        self.tree.column("loan", width=160, anchor="center")
+        self.tree.column("return", width=160, anchor="center")
 
-    def refresh_history(self):
-        """Actualiza la lista del historial de préstamos."""
-        self.history_listbox.delete("1.0", "end")
+        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscroll=vsb.set)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+
+        self.render_table()
+
+    def render_table(self):
+        """Carga el historial completo (incluye libros soft-deleted)."""
+        for r in self.tree.get_children():
+            self.tree.delete(r)
         loans = self.history_class.get_loans()
         for l in loans:
-            return_date = l[4] if l[4] else "Pendiente"
-            self.history_listbox.insert("end", f"ID:{l[0]} Libro:{l[1]} Usuario:{l[2]} Prestado:{l[3]} Devuelto:{return_date}\n")
+            ret = l[4] if l[4] else "Pendiente"
+            self.tree.insert("", "end", values=(l[1] or "—", l[2] or "—", l[3] or "—", ret))

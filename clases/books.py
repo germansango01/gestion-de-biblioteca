@@ -2,11 +2,11 @@ from datetime import datetime
 from clases.database import Database
 
 class Book:
-    """Gestión de libros y préstamos en la biblioteca."""
+    """Gestión de libros, incluyendo disponibilidad y operaciones de préstamo."""
 
-    def __init__(self, db):
+    def __init__(self, db: Database):
         """
-        Inicializa la clase con la base de datos.
+        Inicializar la clase con la base de datos.
 
         Args:
             db (Database): instancia de la clase Database.
@@ -14,9 +14,25 @@ class Book:
         self.db = db
 
 
-    def add(self, title, isbn, author, category):
+    def get_by_id(self, book_id: int) -> tuple | None:
         """
-        Agrega un libro a la biblioteca.
+        Obtener un libro activo por ID.
+
+        Args:
+            book_id (int): ID del libro.
+
+        Returns:
+            tuple | None: (id, title, isbn, author, category, available) o None.
+        """
+        return self.db.select_one(
+            "SELECT id, title, isbn, author, category, available FROM books WHERE id=? AND deleted_at IS NULL;", 
+            (book_id,)
+        )
+
+
+    def add(self, title: str, isbn: str, author: str, category: str) -> bool:
+        """
+        Agregar un libro a la biblioteca.
 
         Args:
             title (str): Título del libro.
@@ -25,7 +41,7 @@ class Book:
             category (str): Categoría del libro.
 
         Returns:
-            bool: True si se agregó correctamente, False si falla.
+            bool: True si se agregó correctamente, False si falla (ej. ISBN duplicado).
         """
         return self.db.insert(
             "INSERT INTO books (title, isbn, author, category) VALUES (?, ?, ?, ?);",
@@ -33,16 +49,16 @@ class Book:
         ) is not None
 
 
-    def update(self, book_id, title, isbn, author, category):
+    def update(self, book_id: int, title: str, isbn: str, author: str, category: str) -> bool:
         """
-        Actualiza los datos de un libro existente.
+        Actualizar los datos de un libro existente.
 
         Args:
             book_id (int): ID del libro.
-            title (str): Título.
-            isbn (str): ISBN.
-            author (str): Autor.
-            category (str): Categoría.
+            title (str): Nuevo Título.
+            isbn (str): Nuevo ISBN.
+            author (str): Nuevo Autor.
+            category (str): Nueva Categoría.
 
         Returns:
             bool: True si se actualizó correctamente, False si falla.
@@ -54,7 +70,7 @@ class Book:
         )
 
 
-    def soft_delete(self, book_id):
+    def soft_delete(self, book_id: int) -> bool:
         """
         Realiza un borrado lógico (soft delete) de un libro.
 
@@ -65,13 +81,13 @@ class Book:
             bool: True si se eliminó correctamente, False si falla.
         """
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return self.db.update(
+        return self.db.delete(
             "UPDATE books SET deleted_at=? WHERE id=? AND deleted_at IS NULL;",
             (ts, book_id)
         )
 
 
-    def list(self, available_only=False):
+    def list(self, available_only: bool = False) -> list[tuple]:
         """
         Lista los libros disponibles o todos los activos.
 
@@ -90,7 +106,7 @@ class Book:
         return self.db.select_all(query, params)
 
 
-    def lend(self, book_id, user_id):
+    def lend(self, book_id: int, user_id: int) -> bool:
         """
         Registra un préstamo de un libro a un usuario.
 
@@ -99,28 +115,30 @@ class Book:
             user_id (int): ID del usuario.
 
         Returns:
-            bool: True si se prestó correctamente, False si falla.
+            bool: True si se prestó correctamente, False si falla (no disponible/no existe).
         """
-        row = self.db.select_one(
-            "SELECT available FROM books WHERE id=? AND deleted_at IS NULL;", (book_id,)
-        )
-        if not row or row[0] == 0:
+        book_data = self.get_by_id(book_id)
+        # Verifica disponibilidad.
+        if not book_data or book_data[5] == 0: 
             return False
-
 
         loan_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if self.db.insert(
+        
+        # Insertar el préstamo.
+        loan_id = self.db.insert(
             "INSERT INTO loans (book_id, user_id, loan_date) VALUES (?, ?, ?);",
             (book_id, user_id, loan_date)
-        ) is None:
+        )
+        if loan_id is None:
             return False
 
+        # Marcar el libro como NO disponible.
         return self.db.update("UPDATE books SET available=0 WHERE id=?;", (book_id,))
 
 
-    def return_book(self, book_id):
+    def return_book(self, book_id: int) -> bool:
         """
-        Registra la devolución de un libro prestado.
+        Registrar la devolución de un libro prestado.
 
         Args:
             book_id (int): ID del libro.
@@ -130,20 +148,23 @@ class Book:
         """
         return_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        # Actualizar el registro de préstamo.
         ok1 = self.db.update(
             "UPDATE loans SET return_date=? WHERE book_id=? AND return_date IS NULL;",
             (return_date, book_id)
         )
+        # Marcar el libro como disponible de nuevo.
         ok2 = self.db.update(
             "UPDATE books SET available=1 WHERE id=? AND available=0;",
             (book_id,)
         )
+        # validar ambos updates
         return ok1 and ok2
 
 
-    def find_active_loan_by_user_id(self, user_id):
+    def find_active_loan_by_user_id(self, user_id: int) -> int | None:
         """
-        Obtiene el ID del libro prestado más recientemente por un usuario.
+        Obtener el ID del libro prestado más recientemente por un usuario.
 
         Args:
             user_id (int): ID del usuario.

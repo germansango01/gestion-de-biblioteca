@@ -1,11 +1,11 @@
 from clases.database import Database
 
 class History:
-    """Gestión del historial de préstamos en la biblioteca."""
+    """Gestión del historial y reportes de préstamos en la biblioteca."""
 
-    def __init__(self, db):
+    def __init__(self, db: Database):
         """
-        Inicializa la clase con la base de datos.
+        Inicializar la clase con la base de datos.
 
         Args:
             db (Database): instancia de la clase Database.
@@ -13,9 +13,9 @@ class History:
         self.db = db
 
 
-    def get_loans(self, user_id=None):
+    def get_loans(self, user_id: int | None = None) -> list[tuple]:
         """
-        Obtiene el historial completo de préstamos.
+        Obtener el historial completo de préstamos, opcionalmente filtrado por usuario.
 
         Args:
             user_id (int, opcional): filtra por ID de usuario.
@@ -37,9 +37,9 @@ class History:
         return self.db.select_all(query, params)
 
 
-    def get_active_loans(self):
+    def get_active_loans(self) -> list[tuple]:
         """
-        Obtiene todos los préstamos activos (no devueltos).
+        Obtener todos los préstamos activos (no devueltos).
 
         Returns:
             list: Lista de tuplas con (id, title, username, loan_date).
