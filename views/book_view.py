@@ -14,8 +14,8 @@ class BookView(ctk.CTkFrame):
         ctk.CTkButton(frame_btn, text="Nuevo Libro", command=self.open_form).pack(side="left")
         ctk.CTkButton(frame_btn, text="Borrar Libro", command=self.delete, fg_color="red").pack(side="right")
 
-        self.tree = ttk.Treeview(self, columns=("ID", "Tit", "ISBN", "Aut", "Cat", "Disp"), show="headings")
-        cols = ["ID", "Tit", "ISBN", "Aut", "Cat", "Disp"]
+        self.tree = ttk.Treeview(self, columns=("ID", "Titulo", "ISBN", "Autor", "Categoría", "Disp"), show="headings")
+        cols = ["ID", "Titulo", "ISBN", "Autor", "Categoría", "Disp"]
         for c in cols: self.tree.heading(c, text=c)
         self.tree.pack(fill="both", expand=True, padx=10, pady=10)
         

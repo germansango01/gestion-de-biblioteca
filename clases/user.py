@@ -113,7 +113,7 @@ class User:
             list: Lista de tuplas con (id, username, email).
         """
         return self.db.select_all(
-            "SELECT id, username, email FROM users WHERE deleted_at IS NULL ORDER BY username ASC;"
+            "SELECT id, username, email FROM users WHERE deleted_at IS NULL ORDER BY id ASC;"
         )
 
 

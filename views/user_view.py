@@ -16,9 +16,10 @@ class UserView(ctk.CTkFrame):
         ctk.CTkButton(frame_btn, text="Borrar Seleccionado", command=self.delete, fg_color="red").pack(side="right")
 
         # Tabla
-        self.tree = ttk.Treeview(self, columns=("ID", "Username"), show="headings")
+        self.tree = ttk.Treeview(self, columns=("ID", "Username", "Email"), show="headings")
         self.tree.heading("ID", text="ID")
         self.tree.heading("Username", text="Usuario")
+        self.tree.heading("Email", text="Correo Electrónico")
         self.tree.pack(fill="both", expand=True, padx=10, pady=10)
         
         self.refresh()

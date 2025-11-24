@@ -1,7 +1,6 @@
 import customtkinter as ctk
 import tkinter.ttk as ttk
 from clases.database import Database
-# Importación de Vistas
 from views.user_view import UserView
 from views.book_view import BookView
 from views.loan_view import LoanView
@@ -9,14 +8,17 @@ from views.history_view import HistoryView
 
 class App(ctk.CTk):
     """
-    Aplicación principal que configura la interfaz gráfica (CustomTkinter)
+    Aplicación principal que configura la interfaz gráfica
     y gestiona las pestañas para cada módulo de la biblioteca.
     """
     def __init__(self):
         super().__init__()
         self.title("Sistema de Gestión de Biblioteca")
-        # Ajustamos el tamaño para que las tablas se vean bien
-        self.geometry("900x650") 
+        self.geometry("1000x500") 
+        
+        # Configuración de CustomTkinter
+        ctk.set_appearance_mode("Light")
+        ctk.set_default_color_theme("blue")
         
         # Configurar y conectar la Base de Datos
         self.db = Database()
@@ -32,7 +34,9 @@ class App(ctk.CTk):
         self._create_tabs()
 
     def _setup_treeview_style(self):
-        """Aplica un estilo básico al Treeview de Tkinter para integrarlo con ctk."""
+        """
+        Aplica un estilo básico al Treeview de Tkinter.
+        """
         style = ttk.Style()
         
         # Tema general para el Treeview (fondo, color de línea)
@@ -49,55 +53,58 @@ class App(ctk.CTk):
         style.configure("Treeview",
                         font=("Arial", 10),
                         rowheight=25,
-                        fieldbackground=self._apply_appearance_mode_color("#FFFFFF", "#2B2B2B"),
-                        background=self._apply_appearance_mode_color("#FFFFFF", "#2B2B2B"),
-                        foreground=self._apply_appearance_mode_color("#000000", "#FFFFFF"))
+                        fieldbackground="#FFFFFF",
+                        background="#FFFFFF",
+                        foreground="#000000")
         
         # Estilo para la selección
         style.map("Treeview", 
-                background=[('selected', self._apply_appearance_mode_color("#1f6aa5", "#1f6aa5"))],
+                background=[('selected', "#1f6aa5")],
                 foreground=[('selected', 'white')])
-
-    def _apply_appearance_mode_color(self, light_color, dark_color):
-        """Devuelve el color basado en el modo de apariencia actual."""
-        if ctk.get_appearance_mode() == "Dark":
-            return dark_color
-        return light_color
+        
+        # Estilo para el hover en los encabezados (Heading)
+        style.map("Treeview.Heading", 
+                background=[('active', '#D6D6D6')], 
+                foreground=[('active', 'black')])
 
 
     def _create_tabs(self):
-        """Crea las pestañas y carga las vistas correspondientes."""
+        """
+        Crea las pestañas y carga las vistas.
+        """
         
-        # Pestaña USUARIOS
-        user_tab = self.tabview.add("Usuarios")
-        UserView(user_tab, self.db).pack(fill="both", expand=True)
+        # Configurar la disposición en grid para las pestañas
+        for tab_name in ["Libros", "Usuarios", "Préstamos y Devoluciones", "Historial"]:
+            tab = self.tabview.add(tab_name)
+            tab.grid_rowconfigure(0, weight=1)
+            tab.grid_columnconfigure(0, weight=1)
 
         # Pestaña LIBROS
-        book_tab = self.tabview.add("Libros")
-        BookView(book_tab, self.db).pack(fill="both", expand=True)
+        book_tab = self.tabview.tab("Libros")
+        BookView(book_tab, self.db).grid(row=0, column=0, sticky="nsew")
+
+        # Pestaña USUARIOS
+        user_tab = self.tabview.tab("Usuarios")
+        UserView(user_tab, self.db).grid(row=0, column=0, sticky="nsew")
         
         # Pestaña PRÉSTAMOS Y DEVOLUCIONES
-        loan_tab = self.tabview.add("Préstamos y Devoluciones")
-        LoanView(loan_tab, self.db).pack(fill="both", expand=True)
+        loan_tab = self.tabview.tab("Préstamos y Devoluciones")
+        LoanView(loan_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
         # Pestaña HISTORIAL
-        history_tab = self.tabview.add("Historial")
-        HistoryView(history_tab, self.db).pack(fill="both", expand=True)
+        history_tab = self.tabview.tab("Historial")
+        HistoryView(history_tab, self.db).grid(row=0, column=0, sticky="nsew")
+
 
     def on_closing(self):
-        """Cierra la conexión a la base de datos al cerrar la aplicación."""
+        """
+        Cierra la conexión a la base de datos al cerrar la aplicación.
+        """
         if self.db:
             self.db.close()
         self.destroy()
 
 if __name__ == "__main__":
-    # Configuración de apariencia (puede ser "System", "Dark", "Light")
-    ctk.set_appearance_mode("Light")
-    ctk.set_default_color_theme("blue")
-    
     app = App()
-    
-    # Aseguramos que la base de datos se cierre cuando se cierra la ventana
     app.protocol("WM_DELETE_WINDOW", app.on_closing)
-    
     app.mainloop()

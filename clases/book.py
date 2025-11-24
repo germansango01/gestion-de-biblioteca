@@ -145,5 +145,5 @@ class Book:
         if available_only:
             query += " AND available = ?"
             params = (1,)
-        query += " ORDER BY title ASC;"
+        query += " ORDER BY id ASC;"
         return self.db.select_all(query, params)
