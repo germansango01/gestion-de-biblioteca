@@ -29,6 +29,17 @@ class User:
             (user_id,)
         )
 
+    @staticmethod
+    def validate(username: str, password: str) -> dict:
+            """Valida campos de usuario."""
+            errors = {}
+            if not username or len(username.strip()) < 4:
+                errors['username'] = "Mínimo 4 caracteres."
+            if not password or len(password.strip()) < 4:
+                errors['password'] = "Mínimo 4 caracteres."
+            return errors
+
+
     def create(self, username: str, password: str) -> bool:
         """
         Crear un nuevo usuario activo con la contraseña hasheada.

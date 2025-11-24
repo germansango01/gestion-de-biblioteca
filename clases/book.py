@@ -2,7 +2,7 @@ from datetime import datetime
 from clases.database import Database
 
 class Book:
-    """Gestión de libros, incluyendo disponibilidad y operaciones de préstamo."""
+    """Gestión de libros"""
 
     def __init__(self, db: Database):
         """
@@ -29,6 +29,15 @@ class Book:
             (book_id,)
         )
 
+    @staticmethod
+    def validate(title: str, isbn: str, author: str, category: str) -> dict:
+        """Valida campos de libro."""
+        errors = {}
+        if not title: errors['title'] = "Requerido."
+        if not author: errors['author'] = "Requerido."
+        if not category: errors['category'] = "Requerido."
+        if len(isbn) < 3: errors['isbn'] = "ISBN inválido."
+        return errors
 
     def add(self, title: str, isbn: str, author: str, category: str) -> bool:
         """
@@ -104,76 +113,3 @@ class Book:
             params = (1,)
         query += " ORDER BY title ASC;"
         return self.db.select_all(query, params)
-
-
-    def lend(self, book_id: int, user_id: int) -> bool:
-        """
-        Registra un préstamo de un libro a un usuario.
-
-        Args:
-            book_id (int): ID del libro.
-            user_id (int): ID del usuario.
-
-        Returns:
-            bool: True si se prestó correctamente, False si falla (no disponible/no existe).
-        """
-        book_data = self.get_by_id(book_id)
-        # Verifica disponibilidad.
-        if not book_data or book_data[5] == 0: 
-            return False
-
-        loan_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Insertar el préstamo.
-        loan_id = self.db.insert(
-            "INSERT INTO loans (book_id, user_id, loan_date) VALUES (?, ?, ?);",
-            (book_id, user_id, loan_date)
-        )
-        if loan_id is None:
-            return False
-
-        # Marcar el libro como NO disponible.
-        return self.db.update("UPDATE books SET available=0 WHERE id=?;", (book_id,))
-
-
-    def return_book(self, book_id: int) -> bool:
-        """
-        Registrar la devolución de un libro prestado.
-
-        Args:
-            book_id (int): ID del libro.
-
-        Returns:
-            bool: True si se devolvió correctamente, False si falla.
-        """
-        return_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Actualizar el registro de préstamo.
-        ok1 = self.db.update(
-            "UPDATE loans SET return_date=? WHERE book_id=? AND return_date IS NULL;",
-            (return_date, book_id)
-        )
-        # Marcar el libro como disponible de nuevo.
-        ok2 = self.db.update(
-            "UPDATE books SET available=1 WHERE id=? AND available=0;",
-            (book_id,)
-        )
-        # validar ambos updates
-        return ok1 and ok2
-
-
-    def find_active_loan_by_user_id(self, user_id: int) -> int | None:
-        """
-        Obtener el ID del libro prestado más recientemente por un usuario.
-
-        Args:
-            user_id (int): ID del usuario.
-
-        Returns:
-            int | None: ID del libro o None si no hay préstamo activo.
-        """
-        row = self.db.select_one(
-            "SELECT book_id FROM loans WHERE user_id=? AND return_date IS NULL "
-            "ORDER BY loan_date DESC LIMIT 1;", (user_id,)
-        )
-        return row[0] if row else None
