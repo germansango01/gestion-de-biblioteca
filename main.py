@@ -1,15 +1,16 @@
 import customtkinter as ctk
+import tkinter as tk
 import tkinter.ttk as ttk
 from clases.database import Database
 from views.user_view import UserView
 from views.book_view import BookView
 from views.loan_view import LoanView
 from views.history_view import HistoryView
+from views.statistics_view import StatisticsView
 
 class App(ctk.CTk):
     """
-    Aplicación principal que configura la interfaz gráfica
-    y gestiona las pestañas para cada módulo de la biblioteca.
+    Aplicación principal que configura la interfaz gráfica.
     """
     def __init__(self):
         super().__init__()
@@ -29,6 +30,9 @@ class App(ctk.CTk):
         # Configurar el TabView principal
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Crear menu
+        self._create_menu()
 
         # Crear las pestañas
         self._create_tabs()
@@ -68,32 +72,65 @@ class App(ctk.CTk):
                 foreground=[('active', 'black')])
 
 
+    def _create_menu(self):
+        """
+        Crea la barra de menú estándar de Tkinter y la asocia a la ventana.
+        """
+        # Crear el objeto Menú principal
+        menubar = tk.Menu(self) 
+        
+        # Asignar la barra de menú a la ventana
+        self.config(menu=menubar)
+
+        # Menú Archivo
+        file_menu = tk.Menu(menubar, tearoff=0)
+        # Añadir el submenú "Salir"
+        file_menu.add_command(label="Salir", command=self.on_closing) 
+        # Añadir el Menú Archivo a la barra principal
+        menubar.add_cascade(label="Archivo", menu=file_menu)
+
+        # Menú Ayuda
+        help_menu = tk.Menu(menubar, tearoff=0)
+        # Añadir el submenú "Acerca de"
+        help_menu.add_command(label="Acerca de...", command=self._show_about_dialog)
+        # Añadir el Menú Ayuda a la barra principal
+        menubar.add_cascade(label="Ayuda", menu=help_menu)
+
+
+    def _show_about_dialog():
+        pass
+
+
     def _create_tabs(self):
         """
         Crea las pestañas y carga las vistas.
         """
         
         # Configurar la disposición en grid para las pestañas
-        for tab_name in ["Libros", "Usuarios", "Préstamos y Devoluciones", "Historial"]:
+        for tab_name in ["Libros", "Usuarios", "Préstamos y Devoluciones", "Historial", "Estadisticas"]:
             tab = self.tabview.add(tab_name)
             tab.grid_rowconfigure(0, weight=1)
             tab.grid_columnconfigure(0, weight=1)
 
-        # Pestaña LIBROS
+        # Pestaña Libros
         book_tab = self.tabview.tab("Libros")
         BookView(book_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
-        # Pestaña USUARIOS
+        # Pestaña usuarios
         user_tab = self.tabview.tab("Usuarios")
         UserView(user_tab, self.db).grid(row=0, column=0, sticky="nsew")
         
-        # Pestaña PRÉSTAMOS Y DEVOLUCIONES
+        # Pestaña Prestamos
         loan_tab = self.tabview.tab("Préstamos y Devoluciones")
         LoanView(loan_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
-        # Pestaña HISTORIAL
+        # Pestaña Historial
         history_tab = self.tabview.tab("Historial")
         HistoryView(history_tab, self.db).grid(row=0, column=0, sticky="nsew")
+
+        # Pestaña Estadisticas
+        statistic_tab = self.tabview.tab("Estadisticas")
+        StatisticsView(statistic_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
 
     def on_closing(self):

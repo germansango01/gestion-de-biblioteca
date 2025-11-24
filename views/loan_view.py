@@ -1,4 +1,3 @@
-# views/loan_view.py
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 from clases.loan import Loan

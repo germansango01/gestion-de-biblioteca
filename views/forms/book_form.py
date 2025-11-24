@@ -1,10 +1,9 @@
 import customtkinter as ctk
 import re
-from tkinter import messagebox
 
 class BookForm(ctk.CTkToplevel):
     """
-    Formulario modal para añadir nuevos libros con validación simple de ISBN en la interfaz.
+    Formulario modal para añadir nuevos libros.
     """
     
     @staticmethod

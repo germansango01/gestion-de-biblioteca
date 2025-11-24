@@ -4,7 +4,7 @@ from tkinter import messagebox
 
 class UserForm(ctk.CTkToplevel):
     """
-    Formulario modal para añadir nuevos usuarios con validación de email y password en la interfaz.
+    Formulario modal para añadir nuevos usuarios.
     """
     
     # Patrón básico para validar email
@@ -56,18 +56,18 @@ class UserForm(ctk.CTkToplevel):
         """
         ui_errors = {}
         
-        # 1. Validación de campos no vacíos
+        # Validación de campos no vacíos
         for key, value in data.items():
             if not value.strip():
                 ui_errors[key] = f"El campo '{key.capitalize()}' es obligatorio."
 
-        # 2. Validación de formato de Email
+        # Validación de formato de Email
         email = data.get('email', '').strip()
         if 'email' not in ui_errors and email:
             if not re.match(self.EMAIL_REGEX, email):
                 ui_errors['email'] = "Formato de email inválido."
 
-        # 3. Validación de Password (Mínimo de caracteres)
+        # Validación de Password (Mínimo de caracteres)
         password = data.get('password', '').strip()
         if 'password' not in ui_errors and len(password) < 6:
             ui_errors['password'] = "La contraseña debe tener al menos 6 caracteres."
@@ -88,16 +88,16 @@ class UserForm(ctk.CTkToplevel):
                     self.errors[k].configure(text=v)
             return
 
-        # Llama a la capa de negocio
+        # Crear usuario.
         res = self.manager.create(data['username'], data['email'], data['password'])
         
         if res is True:
             self.callback()
             self.destroy()
         elif isinstance(res, dict):
-            # Fallo en la capa de negocio (ej. Username o Email duplicado)
+            # Fallo la creación de usuario
             for k, v in res.items():
                 if k in self.errors:
                     self.errors[k].configure(text=v)
                 else:
-                    messagebox.showerror("Error de Negocio", f"Error desconocido: {v}")
+                    messagebox.showerror("Error al crear usuario", f"Error desconocido: {v}")

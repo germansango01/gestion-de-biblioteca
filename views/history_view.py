@@ -1,4 +1,3 @@
-# views/history_view.py
 import customtkinter as ctk
 from tkinter import ttk
 from clases.loan import Loan 
@@ -28,7 +27,7 @@ class HistoryView(ctk.CTkFrame):
                         foreground='black')
 
         # Título (Fila 0)
-        ctk.CTkLabel(self, text="📜 Historial Completo de Préstamos 📜", font=("Arial", 16, "bold")).grid(
+        ctk.CTkLabel(self, text="📜 Historial de Préstamos 📜", font=("Arial", 16, "bold")).grid(
             row=0, column=0, pady=(10, 5), sticky="ew"
         )
         

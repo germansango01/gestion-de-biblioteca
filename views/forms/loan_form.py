@@ -3,8 +3,7 @@ from tkinter import messagebox
 
 class LoanForm(ctk.CTkToplevel):
     """
-    Formulario modal para seleccionar un usuario y un libro disponible
-    y registrar un nuevo préstamo, con validación en la interfaz.
+    Formulario modal para seleccionar un usuario y un libro disponible.
     """
     def __init__(self, master, loan_manager, user_manager, book_manager, refresh_callback):
         super().__init__(master)
