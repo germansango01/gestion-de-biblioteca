@@ -1,73 +1,65 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-from clases.history import History
+# views/history_view.py
+import customtkinter as ctk
+from tkinter import ttk
+from clases.loan import Loan 
 
-class HistoryView(tk.Frame):
-    """Interfaz principal para ver el historial de préstamos."""
-    def __init__(self, master, db_manager):
-        super().__init__(master); self.db_manager = db_manager; self.history_manager = History(db_manager)
-        self.user_search_var = tk.StringVar(); self.is_active_only = tk.BooleanVar(value=True)
-        self.create_widgets(); self.load_history()
+class HistoryView(ctk.CTkFrame):
+    """
+    Muestra el historial completo de préstamos (activos y devueltos).
+    """
 
+    def __init__(self, master, db):
+        super().__init__(master)
+        # Instanciamos Loan, que ahora contiene la lógica de reportes (get_history).
+        self.manager = Loan(db) 
 
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10"); main_frame.pack(fill="both", expand=True)
-        filter_frame = ttk.Frame(main_frame); filter_frame.pack(fill="x", pady=10)
+        # Configuración del layout
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1) # La tabla estará en la fila 2
 
-        ttk.Label(filter_frame, text="Username:").pack(side=tk.LEFT, padx=5)
-        ttk.Entry(filter_frame, textvariable=self.user_search_var, width=20).pack(side=tk.LEFT, padx=5)
+        # --- Configuración de Estilos para el Hover ---
+        style = ttk.Style()
+        style.map("Treeview.Heading", 
+                background=[('active', '#D6D6D6')],
+                foreground=[('active', 'black')])
+        style.configure("Treeview.Heading", 
+                        font=('Arial', 10, 'bold'),
+                        background='#EDEDED', 
+                        foreground='black')
+
+        # Título (Fila 0)
+        ctk.CTkLabel(self, text="📜 Historial Completo de Préstamos 📜", font=("Arial", 16, "bold")).grid(
+            row=0, column=0, pady=(10, 5), sticky="ew"
+        )
         
-        ttk.Checkbutton(filter_frame, text="Solo Activos", variable=self.is_active_only, 
-                        command=self.load_history).pack(side=tk.LEFT, padx=15)
-
-        ttk.Button(filter_frame, text="🔍 Buscar/Refrescar", command=self.load_history, style='Accent.TButton').pack(side=tk.LEFT, padx=5)
+        #Frame de Controles (Fila 1)
+        controls_frame = ctk.CTkFrame(self)
+        controls_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
         
-        self.history_tree = self._setup_treeview(main_frame); self.history_tree.pack(fill="both", expand=True, pady=5)
+        # Botón de Refrescar
+        ctk.CTkButton(controls_frame, text="🔄 Refrescar Historial", command=self.refresh).pack(side="left", padx=5, pady=5)
 
 
-    def _setup_treeview(self, parent_frame):
-        columns = ("ID", "Título", "Usuario", "Préstamo", "Devolución"); tree = ttk.Treeview(parent_frame, columns=columns, show="headings")
-        tree.heading("ID", text="ID", anchor=tk.CENTER); tree.column("ID", width=50, anchor=tk.CENTER)
-        tree.heading("Título", text="Título"); tree.column("Título", width=250)
-        tree.heading("Usuario", text="Usuario"); tree.column("Usuario", width=120)
-        tree.heading("Préstamo", text="Fecha Préstamo"); tree.column("Préstamo", width=150)
-        tree.heading("Devolución", text="Fecha Devolución"); tree.column("Devolución", width=150, anchor=tk.CENTER)
-        tree.tag_configure('activo', foreground='red'); tree.tag_configure('devuelto', foreground='green')
-        return tree
-
-
-    def load_history(self):
-        for item in self.history_tree.get_children(): self.history_tree.delete(item)
-
-        user_id = None; username = self.user_search_var.get().strip(); active_only = self.is_active_only.get()
-
-        if username:
-            # Usar la DB directamente para verificar el ID del usuario
-            result = self.db_manager.execute("SELECT id FROM users WHERE username = ?", (username,), fetch_one=True)
-            if result: user_id = result[0]
-            else: self.history_tree.insert("", tk.END, values=("—", f"Usuario '{username}' no encontrado.", "—", "—", "—")); return
-
-        query = """
-            SELECT l.id, b.title, u.username, l.loan_date, l.return_date
-            FROM loans l JOIN books b ON l.book_id = b.id JOIN users u ON l.user_id = u.id
-        """
-        params = []; conditions = []
-
-        if active_only: conditions.append("l.return_date IS NULL")
-        if user_id is not None: conditions.append("l.user_id = ?"); params.append(user_id)
+        # Configuración de la tabla
+        cols = ("ID", "Libro", "Usuario", "Prestado", "Devuelto")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings")
         
-        if conditions: query += " WHERE " + " AND ".join(conditions)
-        query += " ORDER BY l.loan_date DESC"
+        for c in cols: 
+            self.tree.heading(c, text=c)
+            self.tree.column(c, width=150, anchor='center')
+        
+        self.tree.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        
+        self.refresh()
 
-        history_data = self.db_manager.execute(query, tuple(params))
 
-        if history_data is False or not history_data: 
-            self.history_tree.insert("", tk.END, values=("—", "No hay registros que coincidan con el filtro.", "—", "—", "—")); return
-
-        for row in history_data:
-            loan_id, title, username_loan, loan_date, return_date = row
-            is_active = return_date is None
-            display_return_date = return_date if not is_active else "ACTIVO"
-            tag = 'activo' if is_active else 'devuelto'
-            self.history_tree.insert("", tk.END, values=(loan_id, title, username_loan, loan_date, display_return_date), tags=(tag,))
-
+    def refresh(self):
+        """Carga el historial completo usando el método get_history."""
+        self.tree.delete(*self.tree.get_children())
+        
+        # Usamos el método get_history de la clase Loan 
+        for row in self.manager.get_history():
+            vals = list(row)
+            # Si return_date es NULL, se muestra como "ACTIVO"
+            if not vals[4]: vals[4] = "ACTIVO"
+            self.tree.insert("", "end", values=vals)

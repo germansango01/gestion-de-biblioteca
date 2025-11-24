@@ -1,187 +1,178 @@
 import sqlite3
-from sqlite3 import Cursor
+from datetime import datetime
 
-class DatabaseManager:
-    """Clase para gestionar la conexión a SQLite y exponer métodos CRUD específicos."""
-
-    def __init__(self, db_name: str = "library.db"):
+class Database:
+    """
+    Gestión de conexión y operaciones básicas con SQLite.
+    """
+    
+    def __init__(self, db_name="library.db"):
         """
-        Inicializar el DatabaseManager.
-
+        Inicializa la conexión a la base de datos y crea las tablas si no existen.
+        
         Args:
-            db_name (str): Nombre del archivo de base de datos.
+            db_name (str): nombre del archivo de la base de datos.
         """
         self.db_name = db_name
-        self._connection: sqlite3.Connection | None = None
-        self._cursor: Cursor | None = None
+        self._connection = None
+        self._connect()
+        self._setup_tables()
 
 
-    def connect(self) -> None:
-        """Establecer la conexión a la base de datos e inicializa las tablas."""
-        if self._connection is not None:
-            return
+    def _connect(self):
+        """
+        Establece la conexión a la base de datos y configura sqlite3.
+        """
         try:
             self._connection = sqlite3.connect(self.db_name)
-            self._cursor = self._connection.cursor()
-            self._cursor.execute("PRAGMA foreign_keys = ON;") 
-            self._setup_tables()
+            self._connection.row_factory = sqlite3.Row 
         except sqlite3.Error as e:
-            print(f"[ERROR] No se pudo conectar a la base de datos: {e}")
+            print("[ERROR] Conexión a la base de datos:", e)
             self._connection = None
 
 
-    def disconnect(self) -> None:
-        """Cerrar la conexión y el cursor de la base de datos."""
-        if self._cursor: self._cursor.close()
-        if self._connection: self._connection.close()
-
-
-    def _setup_tables(self) -> None:
-        """Inicializar la estructura de las tablas."""
-        if not self._connection: return
-        
-        self._execute_write_query("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash BLOB NOT NULL
-            );
-        """)
-        self._execute_write_query("""
-            CREATE TABLE IF NOT EXISTS books (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                isbn TEXT UNIQUE NOT NULL,
-                author TEXT,
-                category TEXT DEFAULT '',
-                available INTEGER NOT NULL DEFAULT 1
-            );
-        """)
-        self._execute_write_query("""
-            CREATE TABLE IF NOT EXISTS loans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                book_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
-                loan_date TEXT NOT NULL,
-                return_date TEXT NULL,
-                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
-        """)
-
-
-    def _execute_write_query(self, query: str, params: tuple = ()) -> bool:
+    def insert(self, query: str, params: tuple = ()) -> int | None:
         """
-        Ejecutar consultas de escritura (UPDATE/DELETE/CREATE). 
-        Return: True o False.
-        """
-        if not self._cursor or not self._connection: return False
-        try:
-            self._cursor.execute(query, params)
-            self._connection.commit()
-            return True
-        except sqlite3.IntegrityError as e:
-            print(f"[ERROR] Violación de unicidad (IntegrityError): {e}")
-            return False
-        except sqlite3.Error as e:
-            print(f"[ERROR] Consulta de escritura falló: {e}")
-            return False
-
-
-    def select_one(self, query: str, params: tuple = ()) -> tuple | None:
-        """
-        Ejecutar SELECT para obtener un solo registro.
+        Ejecuta un INSERT y retorna el ID de la fila insertada.
 
         Args:
-            query (str): Consulta SQL SELECT.
-            params (tuple): Parámetros de la consulta.
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
 
-        Return:
-            tuple | None: Tupla con la fila o None si no se encontró o falla.
+        Returns:
+            int | None: ID de la fila insertada o None si falla.
         """
-        if not self._cursor: return None
-        try:
-            self._cursor.execute(query, params)
-            return self._cursor.fetchone() 
-        except sqlite3.Error as e:
-            print(f"[ERROR] Consulta SELECT_ONE falló: {e}")
+        if not self._connection:
             return None
-
-
-    def select_all(self, query: str, params: tuple = ()) -> list:
-        """
-        Ejecutar SELECT para para obtener todos los registros.
-
-        Args:
-            query (str): Consulta SQL SELECT.
-            params (tuple): Parámetros de la consulta.
-
-        Return:
-            list: Lista de tuplas o lista vacía si no hay resultados/falla.
-        """
-        if not self._cursor: return []
         try:
-            self._cursor.execute(query, params)
-            return self._cursor.fetchall()
-        except sqlite3.Error as e:
-            print(f"[ERROR] Consulta SELECT_ALL falló: {e}")
-            return []
-
-
-    def insert(self, query: str, params: tuple = ()) -> int | bool:
-        """
-        Ejecutar INSERT.
-
-        Args:
-            query (str): Consulta SQL INSERT.
-            params (tuple): Parámetros de la consulta.
-
-        Return:
-            int | bool: ID de la nueva fila (int) o False si falla.
-        """
-        if not self._cursor or not self._connection: return False
-        try:
-            self._cursor.execute(query, params)
+            cur = self._connection.cursor()
+            cur.execute(query, params)
             self._connection.commit()
-            
-            last_id: int | None = self._cursor.lastrowid
-            
-            if last_id is not None:
-                return last_id
-            else:
-                print("[WARNING] Inserción exitosa, pero no se pudo obtener lastrowid.")
-                return False 
-        except sqlite3.IntegrityError as e:
-            print(f"[ERROR] Violación de unicidad (IntegrityError) en INSERT: {e}")
-            return False
-        except sqlite3.Error as e:
-            print(f"[ERROR] Consulta INSERT falló: {e}")
-            return False
+            return cur.lastrowid
+        except sqlite3.Error:
+            return None
 
 
     def update(self, query: str, params: tuple = ()) -> bool:
         """
-        Ejecutar UPDATE.
+        Ejecuta una consulta UPDATE o cualquier consulta que modifique el estado de la DB (incluyendo CREATE TABLE).
 
         Args:
-            query (str): Consulta SQL UPDATE.
-            params (tuple): Parámetros de la consulta.
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
 
-        Return:
-            bool: True si fue exitoso, False si falla.
+        Returns:
+            bool: True si la consulta se ejecutó correctamente, False si falla.
         """
-        return self._execute_write_query(query, params)
+        if not self._connection:
+            return False
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            self._connection.commit()
+            return True
+        except sqlite3.Error:
+            return False
 
 
     def delete(self, query: str, params: tuple = ()) -> bool:
         """
-        Ejecutar DELETE.
+        Ejecuta una consulta DELETE.
 
         Args:
-            query (str): Consulta SQL DELETE.
-            params (tuple): Parámetros de la consulta.
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
 
-        Return:
-            bool: True si fue exitoso, False si falla.
+        Returns:
+            bool: True si la consulta se ejecutó correctamente, False si falla.
         """
-        return self._execute_write_query(query, params)
+        return self.update(query, params)
+
+
+    def select_one(self, query: str, params: tuple = ()) -> tuple | None:
+        """
+        Ejecuta un SELECT y retorna una fila como tupla.
+
+        Args:
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            tuple | None: Una fila seleccionada o None si no hay resultados.
+        """
+        if not self._connection:
+            return None
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            row = cur.fetchone()
+            return tuple(row) if row else None
+        except sqlite3.Error:
+            return None
+
+
+    def select_all(self, query: str, params: tuple = ()) -> list[tuple]:
+        """
+        Ejecuta un SELECT y retorna varias filas como una lista de tuplas.
+
+        Args:
+            query (str): consulta SQL.
+            params (tuple): parámetros para la consulta.
+
+        Returns:
+            list: Lista de tuplas con todos los resultados.
+        """
+        if not self._connection:
+            return []
+        try:
+            cur = self._connection.cursor()
+            cur.execute(query, params)
+            return [tuple(r) for r in cur.fetchall()]
+        except sqlite3.Error:
+            return []
+
+
+    def _setup_tables(self):
+        """
+        Crea las tablas 'users', 'books' y 'loans' si no existen.
+        """
+        self.update("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                deleted_at TEXT NULL
+            );
+        """)
+        self.update("""
+            CREATE TABLE IF NOT EXISTS books (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                isbn TEXT NOT NULL UNIQUE,
+                author TEXT NOT NULL,
+                category TEXT NOT NULL,
+                available INTEGER NOT NULL DEFAULT 1,
+                deleted_at TEXT NULL
+            );
+        """)
+        self.update("""
+            CREATE TABLE IF NOT EXISTS loans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER,
+                user_id INTEGER,
+                loan_date TEXT NOT NULL,
+                return_date TEXT NULL,
+                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+            );
+        """)
+
+
+    def close(self):
+        """
+        Cierra la conexión a la base de datos.
+        """
+        if self._connection:
+            self._connection.close()
+            self._connection = None

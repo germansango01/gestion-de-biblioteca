@@ -1,96 +1,110 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
-from clases.database import DatabaseManager
-from views.book_view import BookView
+import customtkinter as ctk
+import tkinter.ttk as ttk
+from clases.database import Database
 from views.user_view import UserView
+from views.book_view import BookView
+from views.loan_view import LoanView
 from views.history_view import HistoryView
 
-# Database Library
-DB_NAME = "library.db"
-
-class LibraryApp(tk.Tk):
-
+class App(ctk.CTk):
+    """
+    Aplicación principal que configura la interfaz gráfica
+    y gestiona las pestañas para cada módulo de la biblioteca.
+    """
     def __init__(self):
         super().__init__()
-        self.title("Sistema de Biblioteca Modular")
-        self.geometry("900x650")
+        self.title("Sistema de Gestión de Biblioteca")
+        self.geometry("1000x500") 
         
-        # Configuración de estilo TTK
-        style = ttk.Style(self)
-        style.theme_use('clam')
-        # Estilo principal
-        style.configure('Accent.TButton', background='#2196F3', foreground='white', borderwidth=0)
-        style.map('Accent.TButton', background=[('active', '#1976D2')], foreground=[('active', 'white')])
-
-        self.db_manager = None
+        # Configuración de CustomTkinter
+        ctk.set_appearance_mode("Light")
+        ctk.set_default_color_theme("blue")
         
-        if self._connectect_db():
-            self.create_menu()
-            self.create_notebook()
-        else:
-            messagebox.showerror("Error Fatal", "La aplicación no pudo iniciar debido a un error de base de datos.")
-            self.quit()
+        # Configurar y conectar la Base de Datos
+        self.db = Database()
 
+        # Configurar el estilo de Treeview
+        self._setup_treeview_style()
 
-    def _connectect_db(self):
-        """Intenta conectar con la base de datos y establece la conexión."""
-        self.db_manager = DatabaseManager(db_name=DB_NAME)
-        self.db_manager.connect_db()
+        # Configurar el TabView principal
+        self.tabview = ctk.CTkTabview(self)
+        self.tabview.pack(fill="both", expand=True, padx=10, pady=10)
 
-        return self.db_manager._connect is not None
+        # Crear las pestañas
+        self._create_tabs()
 
-
-    def create_menu(self):
-        """Crea la barra de menú superior."""
-        menubar = tk.Menu(self); self.config(menu=menubar)
-
-        # Menú Archivo
-        file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Archivo", menu=file_menu)
-        file_menu.add_command(label="Recargar Vistas", command=self.reload_notebook)
-        file_menu.add_separator()
-        file_menu.add_command(label="Salir", command=self.on_closing)
+    def _setup_treeview_style(self):
+        """
+        Aplica un estilo básico al Treeview de Tkinter.
+        """
+        style = ttk.Style()
         
-        # Menú Ayuda
-        help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Ayuda", menu=help_menu)
-        help_menu.add_command(label="Acerca de", command=lambda: messagebox.showinfo("Acerca de", "Sistema de Biblioteca Simple v1.0"))
+        # Tema general para el Treeview (fondo, color de línea)
+        style.theme_use("default")
+        
+        # Estilo para los encabezados de las columnas (headings)
+        style.configure("Treeview.Heading", 
+                        font=("Arial", 11, "bold"), 
+                        background="#3A7EBf",
+                        foreground="white",
+                        padding=[5, 5])
+        
+        # Estilo para las filas
+        style.configure("Treeview",
+                        font=("Arial", 10),
+                        rowheight=25,
+                        fieldbackground="#FFFFFF",
+                        background="#FFFFFF",
+                        foreground="#000000")
+        
+        # Estilo para la selección
+        style.map("Treeview", 
+                background=[('selected', "#1f6aa5")],
+                foreground=[('selected', 'white')])
+        
+        # Estilo para el hover en los encabezados (Heading)
+        style.map("Treeview.Heading", 
+                background=[('active', '#D6D6D6')], 
+                foreground=[('active', 'black')])
 
 
-    def create_notebook(self):
-        """Crea el widget Notebook (pestañas) y añade las vistas (Frames)."""
-        if hasattr(self, 'notebook'): self.notebook.destroy()
-            
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(pady=10, padx=10, expand=True, fill="both")
+    def _create_tabs(self):
+        """
+        Crea las pestañas y carga las vistas.
+        """
+        
+        # Configurar la disposición en grid para las pestañas
+        for tab_name in ["Libros", "Usuarios", "Préstamos y Devoluciones", "Historial"]:
+            tab = self.tabview.add(tab_name)
+            tab.grid_rowconfigure(0, weight=1)
+            tab.grid_columnconfigure(0, weight=1)
 
-        # Pestaña de Libros
-        book_frame = BookView(self.notebook, self.db_manager)
-        self.notebook.add(book_frame, text="📚 Libros / Préstamos")
+        # Pestaña LIBROS
+        book_tab = self.tabview.tab("Libros")
+        BookView(book_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
-        # Pestaña de Usuarios
-        user_frame = UserView(self.notebook, self.db_manager)
-        self.notebook.add(user_frame, text="👤 Usuarios")
+        # Pestaña USUARIOS
+        user_tab = self.tabview.tab("Usuarios")
+        UserView(user_tab, self.db).grid(row=0, column=0, sticky="nsew")
+        
+        # Pestaña PRÉSTAMOS Y DEVOLUCIONES
+        loan_tab = self.tabview.tab("Préstamos y Devoluciones")
+        LoanView(loan_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
-        # Pestaña de Historial
-        history_frame = HistoryView(self.notebook, self.db_manager)
-        self.notebook.add(history_frame, text="📜 Historial")
-
-
-    def reload_notebook(self):
-        """Recarga todas las pestañas."""
-        self.create_notebook()
-        messagebox.showinfo("Recarga", "Vistas recargadas correctamente.")
+        # Pestaña HISTORIAL
+        history_tab = self.tabview.tab("Historial")
+        HistoryView(history_tab, self.db).grid(row=0, column=0, sticky="nsew")
 
 
     def on_closing(self):
-        """Maneja el cierre de la ventana principal y cierra la conexión DB."""
-        if messagebox.askokcancel("Salir", "¿Estás seguro de que deseas salir?"):
-            if self.db_manager:
-                self.db_manager.close_db()
-            self.destroy()
+        """
+        Cierra la conexión a la base de datos al cerrar la aplicación.
+        """
+        if self.db:
+            self.db.close()
+        self.destroy()
 
-if __name__ == '__main__':
-    app = LibraryApp()
+if __name__ == "__main__":
+    app = App()
     app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()

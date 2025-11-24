@@ -1,89 +1,44 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
-from clases.users import User
+import customtkinter as ctk
+from tkinter import ttk, messagebox
+from clases.user import User
+from views.forms.user_form import UserForm
 
-class AddUserModal(tk.Toplevel):
-    """Ventana modal para el formulario de crear usuario."""
-    def __init__(self, master, db_manager, callback_on_success=None):
+class UserView(ctk.CTkFrame):
+
+    def __init__(self, master, db):
         super().__init__(master)
-        self.title("👤 Crear Nuevo Usuario"); self.transient(master); self.grab_set()
-        self.user_manager = User(db_manager); self.callback_on_success = callback_on_success
-        self.username_var = tk.StringVar(); self.password_var = tk.StringVar()
-        self.create_widgets(); self.focus_set()
+        self.manager = User(db)
 
+        # Botones
+        frame_btn = ctk.CTkFrame(self)
+        frame_btn.pack(fill="x", padx=10, pady=10)
+        ctk.CTkButton(frame_btn, text="Nuevo Usuario", command=self.open_form).pack(side="left")
+        ctk.CTkButton(frame_btn, text="Borrar Seleccionado", command=self.delete, fg_color="red").pack(side="right")
 
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="15"); main_frame.pack(fill="both", expand=True)
-        ttk.Label(main_frame, text="Username:").grid(row=0, column=0, sticky="w", pady=5)
-        ttk.Entry(main_frame, textvariable=self.username_var, width=30).grid(row=0, column=1, padx=10, pady=5)
-        ttk.Label(main_frame, text="Password:").grid(row=1, column=0, sticky="w", pady=5)
-        ttk.Entry(main_frame, textvariable=self.password_var, show="*", width=30).grid(row=1, column=1, padx=10, pady=5)
-        ttk.Button(main_frame, text="✅ Registrar Usuario", command=self.create_user_ui, style='Accent.TButton').grid(
-            row=2, column=0, columnspan=2, pady=15, sticky="ew")
-
-
-    def create_user_ui(self):
-        username = self.username_var.get().strip(); password = self.password_var.get().strip()
-        if not username or not password: messagebox.showerror("Error", "Ambos campos son obligatorios.", parent=self); return
-
-        if self.user_manager.create_user(username, password):
-            messagebox.showinfo("Éxito", f"Usuario '{username}' creado.", parent=self)
-            self.username_var.set(""); self.password_var.set("")
-            if self.callback_on_success: self.callback_on_success()
-            self.destroy()
-        else:
-            messagebox.showerror("Error", "No se pudo crear el usuario (posiblemente ya existe).", parent=self)
-
-
-class UserView(tk.Frame):
-    """Interfaz principal para gestionar usuarios."""
-    def __init__(self, master, db_manager):
-        super().__init__(master); self.db_manager = db_manager; self.user_manager = User(db_manager)
-        self.auth_user_var = tk.StringVar(); self.auth_pass_var = tk.StringVar()
-        self.create_widgets(); self.load_users()
-
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10"); main_frame.pack(fill="both", expand=True)
-        control_frame = ttk.Frame(main_frame); control_frame.pack(fill="x", pady=10)
-        ttk.Button(control_frame, text="➕ Nuevo Usuario", command=self.open_add_user_modal).pack(side=tk.LEFT, padx=5)
-        ttk.Button(control_frame, text="🔄 Recargar Usuarios", command=self.load_users).pack(side=tk.LEFT, padx=5)
-
-        auth_frame = ttk.LabelFrame(main_frame, text="Probar Autenticación", padding="10"); auth_frame.pack(fill="x", pady=10)
-        ttk.Label(auth_frame, text="Username:").grid(row=0, column=0, padx=5, sticky="w")
-        ttk.Entry(auth_frame, textvariable=self.auth_user_var, width=20).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Label(auth_frame, text="Password:").grid(row=1, column=0, padx=5, sticky="w")
-        ttk.Entry(auth_frame, textvariable=self.auth_pass_var, show="*", width=20).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(auth_frame, text="🔑 Autenticar", command=self.authenticate_ui, style='Accent.TButton').grid(row=0, column=2, rowspan=2, padx=15, sticky="ns")
+        # Tabla
+        self.tree = ttk.Treeview(self, columns=("ID", "Username", "Email"), show="headings")
+        self.tree.heading("ID", text="ID")
+        self.tree.heading("Username", text="Usuario")
+        self.tree.heading("Email", text="Correo Electrónico")
+        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
         
-        self.users_tree = self._setup_treeview(main_frame); self.users_tree.pack(fill="both", expand=True, pady=5)
+        self.refresh()
 
 
-    def _setup_treeview(self, parent_frame):
-        columns = ("ID", "Username"); tree = ttk.Treeview(parent_frame, columns=columns, show="headings", selectmode="browse")
-        tree.heading("ID", text="ID", anchor=tk.CENTER); tree.column("ID", width=80, anchor=tk.CENTER)
-        tree.heading("Username", text="Username"); tree.column("Username", width=250)
-        return tree
+    def refresh(self):
+        self.tree.delete(*self.tree.get_children())
+        for row in self.manager.list():
+            self.tree.insert("", "end", values=row)
 
 
-    def open_add_user_modal(self): AddUserModal(self.master, self.db_manager, self.load_users)
+    def open_form(self):
+        UserForm(self, self.manager, self.refresh)
 
 
-    def authenticate_ui(self):
-        username = self.auth_user_var.get().strip(); password = self.auth_pass_var.get().strip()
-        if not username or not password: messagebox.showerror("Error", "Ingrese usuario y contraseña para autenticar."); return
-        user_id = self.user_manager.authenticate(username, password)
-        
-        if user_id:
-            messagebox.showinfo("Autenticación Exitosa", f"¡Bienvenido, {username}! ID: {user_id}")
-            self.auth_user_var.set(""); self.auth_pass_var.set("")
-        else:
-            messagebox.showerror("Autenticación Fallida", "Usuario o contraseña incorrectos.")
-
-
-    def load_users(self):
-        for item in self.users_tree.get_children(): self.users_tree.delete(item)
-        users = self.user_manager.list_users()
-        
-        if not users: self.users_tree.insert("", tk.END, values=("—", "No hay usuarios registrados.")); return
-        for user in users: self.users_tree.insert("", tk.END, values=(user[0], user[1]))
+    def delete(self):
+        sel = self.tree.selection()
+        if sel:
+            uid = self.tree.item(sel[0])['values'][0]
+            if messagebox.askyesno("Confirmar", "¿Borrar usuario?"):
+                self.manager.soft_delete(int(uid))
+                self.refresh()
