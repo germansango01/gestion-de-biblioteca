@@ -60,13 +60,13 @@ class Loan:
         """
         ret_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # 1. Cerrar préstamo (solo si return_date es NULL)
+        # Cerrar préstamo (solo si return_date es NULL)
         ok_loan = self.db.update(
             "UPDATE loans SET return_date=? WHERE id=? AND return_date IS NULL", 
             (ret_date, loan_id)
         )
         
-        # 2. Liberar libro (available = 1)
+        # Liberar libro (available = 1)
         ok_book = self.db.update("UPDATE books SET available=1 WHERE id=?", (book_id,))
         
         # Debe ser exitoso si el préstamo existía y se pudo actualizar el libro.
@@ -88,7 +88,6 @@ class Loan:
             WHERE l.return_date IS NULL
             ORDER BY l.loan_date ASC;
         """
-        # Nota: book_id se incluye para facilitar la devolución en la vista.
         return self.db.select_all(query)
 
 

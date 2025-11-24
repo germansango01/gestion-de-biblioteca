@@ -20,7 +20,9 @@ class Database:
 
 
     def _connect(self):
-        """Establece la conexión a la base de datos y configura sqlite3."""
+        """
+        Establece la conexión a la base de datos y configura sqlite3.
+        """
         try:
             self._connection = sqlite3.connect(self.db_name)
             self._connection.row_factory = sqlite3.Row 
@@ -138,6 +140,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
                 password TEXT NOT NULL,
                 deleted_at TEXT NULL
             );
@@ -167,7 +170,9 @@ class Database:
 
 
     def close(self):
-        """Cierra la conexión a la base de datos."""
+        """
+        Cierra la conexión a la base de datos.
+        """
         if self._connection:
             self._connection.close()
             self._connection = None

@@ -16,20 +16,19 @@ class App(ctk.CTk):
         super().__init__()
         self.title("Sistema de Gestión de Biblioteca")
         # Ajustamos el tamaño para que las tablas se vean bien
-        self.geometry("1100x700") 
+        self.geometry("900x650") 
         
-        # 1. Configurar y conectar la Base de Datos
-        # El nombre por defecto es 'library.db'
+        # Configurar y conectar la Base de Datos
         self.db = Database()
 
-        # 2. Configurar el estilo de Treeview
+        # Configurar el estilo de Treeview
         self._setup_treeview_style()
 
-        # 3. Configurar el TabView principal
+        # Configurar el TabView principal
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # 4. Crear las pestañas
+        # Crear las pestañas
         self._create_tabs()
 
     def _setup_treeview_style(self):
@@ -42,7 +41,7 @@ class App(ctk.CTk):
         # Estilo para los encabezados de las columnas (headings)
         style.configure("Treeview.Heading", 
                         font=("Arial", 11, "bold"), 
-                        background="#3A7EBf", # Color primario de CTk
+                        background="#3A7EBf",
                         foreground="white",
                         padding=[5, 5])
         
@@ -50,7 +49,7 @@ class App(ctk.CTk):
         style.configure("Treeview",
                         font=("Arial", 10),
                         rowheight=25,
-                        fieldbackground=self._apply_appearance_mode_color("#FFFFFF", "#2B2B2B"), # Color de fondo del área de datos
+                        fieldbackground=self._apply_appearance_mode_color("#FFFFFF", "#2B2B2B"),
                         background=self._apply_appearance_mode_color("#FFFFFF", "#2B2B2B"),
                         foreground=self._apply_appearance_mode_color("#000000", "#FFFFFF"))
         
@@ -69,19 +68,19 @@ class App(ctk.CTk):
     def _create_tabs(self):
         """Crea las pestañas y carga las vistas correspondientes."""
         
-        # 1. Pestaña USUARIOS
+        # Pestaña USUARIOS
         user_tab = self.tabview.add("Usuarios")
         UserView(user_tab, self.db).pack(fill="both", expand=True)
 
-        # 2. Pestaña LIBROS
+        # Pestaña LIBROS
         book_tab = self.tabview.add("Libros")
         BookView(book_tab, self.db).pack(fill="both", expand=True)
         
-        # 3. Pestaña PRÉSTAMOS Y DEVOLUCIONES
+        # Pestaña PRÉSTAMOS Y DEVOLUCIONES
         loan_tab = self.tabview.add("Préstamos y Devoluciones")
         LoanView(loan_tab, self.db).pack(fill="both", expand=True)
 
-        # 4. Pestaña HISTORIAL
+        # Pestaña HISTORIAL
         history_tab = self.tabview.add("Historial")
         HistoryView(history_tab, self.db).pack(fill="both", expand=True)
 
@@ -93,7 +92,7 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     # Configuración de apariencia (puede ser "System", "Dark", "Light")
-    ctk.set_appearance_mode("System")
+    ctk.set_appearance_mode("Light")
     ctk.set_default_color_theme("blue")
     
     app = App()
