@@ -5,7 +5,6 @@ class Book:
     """
     Gestión de libros, incluyendo validación de unicidad y estado de préstamo.
     """
-
     def __init__(self, db: Database):
         self.db = db
 
@@ -135,6 +134,7 @@ class Book:
             return {'general': 'Error desconocido al intentar eliminar el libro.'}
             
         return True
+
 
     def list(self, available_only: bool = False) -> list[tuple]:
         """

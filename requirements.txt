@@ -1,6 +1,5 @@
 bcrypt
-fpdf2
-numpy
-matplotlib
-pandas
 customtkinter
+matplotlib
+numpy
+pandas

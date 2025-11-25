@@ -6,7 +6,6 @@ class Loan:
     """
     Gestión completa de préstamos, devoluciones y reportes de historial.
     """
-
     def __init__(self, db: Database):
         """
         Inicializa con la base de datos.
