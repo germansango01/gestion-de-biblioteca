@@ -15,7 +15,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Sistema de Gestión de Biblioteca")
-        self.geometry("900x650")
+        self.geometry("900x700")
         
         # Configuración de CustomTkinter
         ctk.set_appearance_mode("Light")

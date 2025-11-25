@@ -27,8 +27,8 @@ class BookView(ctk.CTkFrame):
         # --- Configuración de estilos para encabezado ---
         style = ttk.Style()
         style.map("Treeview.Heading", 
-                  background=[('active', '#D6D6D6')],
-                  foreground=[('active', 'black')])
+                background=[('active', '#D6D6D6')],
+                foreground=[('active', 'black')])
         style.configure("Treeview.Heading", 
                         font=('Arial', 10, 'bold'),
                         background='#EDEDED', 
@@ -38,18 +38,16 @@ class BookView(ctk.CTkFrame):
         frame_btn = ctk.CTkFrame(self)
         frame_btn.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
         ctk.CTkButton(frame_btn, text="Nuevo Libro", command=self.open_form).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(frame_btn, text="Borrar Libro", command=self.delete, fg_color="red").pack(side="right", padx=5, pady=5)
         ctk.CTkButton(frame_btn, text="🔄 Refrescar", command=self.refresh).pack(side="left", padx=5, pady=5)
+        ctk.CTkButton(frame_btn, text="Borrar Libro", command=self.delete, fg_color="red").pack(side="right", padx=5, pady=5)
 
         # --- Configuración del Treeview ---
         cols = ("ID", "Titulo", "ISBN", "Autor", "Categoría", "Disponible")
         self.tree = ttk.Treeview(self, columns=cols, show="headings")
 
-        # ID oculto
-        self.tree.column("ID", width=0, minwidth=0, stretch=False)
-        self.tree.heading("ID", text="")
+        self.tree.column("ID", width=50, anchor="center", stretch=False)
+        self.tree.heading("ID", text="ID")
 
-        # Columnas visibles con ancho y alineación
         self.tree.column("Titulo", width=220, anchor="w")
         self.tree.heading("Titulo", text="Titulo")
 
@@ -62,7 +60,7 @@ class BookView(ctk.CTkFrame):
         self.tree.column("Categoría", width=140, anchor="w")
         self.tree.heading("Categoría", text="Categoría")
 
-        self.tree.column("Disponible", width=100, anchor="center")
+        self.tree.column("Disponible", width=80, anchor="center", stretch=False)
         self.tree.heading("Disponible", text="Disponible")
 
         self.tree.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))

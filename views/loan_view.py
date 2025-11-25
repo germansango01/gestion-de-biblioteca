@@ -23,8 +23,8 @@ class LoanView(ctk.CTkFrame):
         # --- Estilos encabezado ---
         style = ttk.Style()
         style.map("Treeview.Heading",
-                  background=[('active', '#D6D6D6')],
-                  foreground=[('active', 'black')])
+                background=[('active', '#D6D6D6')],
+                foreground=[('active', 'black')])
         style.configure("Treeview.Heading",
                         font=('Arial', 10, 'bold'),
                         background='#EDEDED',
@@ -34,8 +34,8 @@ class LoanView(ctk.CTkFrame):
         frame_btn = ctk.CTkFrame(self)
         frame_btn.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
         ctk.CTkButton(frame_btn, text="Nuevo Préstamo", command=self.open_form).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(frame_btn, text="Devolver Libro", command=self.return_book, fg_color="orange").pack(side="left", padx=5, pady=5)
         ctk.CTkButton(frame_btn, text="🔄 Refrescar", command=self.refresh).pack(side="left", padx=5, pady=5)
+        ctk.CTkButton(frame_btn, text="Devolver Libro", command=self.return_book, fg_color="orange").pack(side="right", padx=5, pady=5)
 
         # --- Configuración del Treeview ---
         cols = ("ID", "Libro", "Usuario", "Fecha", "BookID")
