@@ -1,0 +1,110 @@
+import customtkinter as ctk
+import re
+
+class BookForm(ctk.CTkToplevel):
+    """
+    Formulario modal para añadir nuevos libros.
+    """
+    def __init__(self, master, book_manager, refresh_callback):
+        super().__init__(master)
+        self.title("Nuevo Libro")
+        self.geometry("450x450")
+        self.manager = book_manager
+        self.callback = refresh_callback
+        self.grab_set()
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=3)
+
+        self.entries = {}
+        self.errors = {}
+
+        fields = ["title", "isbn", "author", "category"]
+        row_counter = 0
+
+        # Label para errores generales
+        self.general_error = ctk.CTkLabel(self, text="", text_color="red")
+        self.general_error.grid(row=row_counter, column=0, columnspan=2, padx=20, pady=(10, 5), sticky="w")
+        row_counter += 1
+
+        for f in fields:
+            ctk.CTkLabel(self, text=f.capitalize() + ":").grid(
+                row=row_counter, column=0, padx=(20,5), pady=(10,0), sticky="w"
+            )
+            self.entries[f] = ctk.CTkEntry(self)
+            self.entries[f].grid(
+                row=row_counter, column=1, padx=(5,20), pady=(10,0), sticky="ew"
+            )
+            row_counter += 1
+
+            self.errors[f] = ctk.CTkLabel(self, text="", text_color="red")
+            self.errors[f].grid(
+                row=row_counter, column=0, columnspan=2, padx=20, pady=(0,5), sticky="w"
+            )
+            row_counter += 1
+
+        ctk.CTkButton(self, text="Guardar", command=self.save).grid(
+            row=row_counter, column=0, columnspan=2, pady=20, padx=20, sticky="ew"
+        )
+
+
+    @staticmethod
+    def is_valid_isbn(isbn: str) -> bool:
+        """
+        Verifica que el ISBN tenga 10 o 13 caracteres, solo dígitos o 'X' al final.
+        """
+        isbn_clean = isbn.replace('-', '').replace(' ', '').upper()
+        n = len(isbn_clean)
+        if n == 10:
+            pattern = r"^\d{9}[\dX]$"
+        elif n == 13:
+            pattern = r"^\d{13}$"
+        else:
+            return False
+        return bool(re.match(pattern, isbn_clean))
+
+
+    def _validate_ui(self, data: dict) -> dict:
+        """
+        Realiza la validación de la interfaz (campos no vacíos y formato ISBN).
+        """
+        ui_errors = {}
+        for key, value in data.items():
+            if not value.strip():
+                ui_errors[key] = f"El campo '{key.capitalize()}' es obligatorio."
+
+        isbn = data.get('isbn', '').strip()
+        if 'isbn' not in ui_errors and isbn:
+            if not self.is_valid_isbn(isbn):
+                ui_errors['isbn'] = "ISBN inválido. Debe tener 10 (incl. X) o 13 dígitos."
+        return ui_errors
+
+
+    def save(self):
+        """
+        Guarda el libro después de validar UI y capa de negocio.
+        """
+        data = {k: v.get() for k,v in self.entries.items()}
+        self.general_error.configure(text="")
+        for lbl in self.errors.values():
+            lbl.configure(text="")
+
+        # Validación de UI
+        ui_errors = self._validate_ui(data)
+        if ui_errors:
+            for k,v in ui_errors.items():
+                if k in self.errors:
+                    self.errors[k].configure(text=v)
+            return
+
+        # Validación de negocio (unicidad, etc.)
+        res = self.manager.create(data['title'], data['isbn'], data['author'], data['category'])
+        if res is True:
+            self.callback()
+            self.destroy()
+        elif isinstance(res, dict):
+            for k,v in res.items():
+                if k in self.errors:
+                    self.errors[k].configure(text=v)
+                else:
+                    self.general_error.configure(text=v)
