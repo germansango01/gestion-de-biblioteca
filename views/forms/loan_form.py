@@ -5,7 +5,6 @@ class LoanForm(ctk.CTkToplevel):
     """
     Formulario modal para seleccionar un usuario y un libro disponible.
     """
-
     def __init__(self, master, loan_manager, user_manager, book_manager, refresh_callback):
         super().__init__(master)
         self.title("Nuevo Préstamo")
@@ -21,19 +20,19 @@ class LoanForm(ctk.CTkToplevel):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=3)
 
-        # --- Obtener datos ---
+        # Obtener datos.
         users = self.user_mgr.list()
         books = self.book_mgr.list(available_only=True)
         self.user_map = {u[1]: u[0] for u in users}
         self.book_map = {b[1]: b[0] for b in books}
 
-        self.user_names = ["--- Seleccione Usuario ---"] + list(self.user_map.keys()) if users else ["--- Seleccione Usuario ---"]
-        self.book_titles = ["--- Seleccione Libro ---"] + list(self.book_map.keys()) if books else ["--- Seleccione Libro ---"]
+        self.user_names = ["--- Seleccione Usuario."] + list(self.user_map.keys()) if users else ["--- Seleccione Usuario."]
+        self.book_titles = ["--- Seleccione Libro."] + list(self.book_map.keys()) if books else ["--- Seleccione Libro."]
 
         self.user_placeholder = self.user_names[0]
         self.book_placeholder = self.book_titles[0]
 
-        # --- Error general ---
+        # Error general.
         self.general_error = ctk.CTkLabel(self, text="", text_color="red")
         self.general_error.grid(row=0, column=0, columnspan=2, padx=20, pady=(10,5), sticky="w")
 

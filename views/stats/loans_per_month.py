@@ -2,7 +2,6 @@ import customtkinter as ctk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import pandas as pd
-from datetime import datetime, timedelta
 
 class LoansPerMonthForm(ctk.CTkToplevel):
     """

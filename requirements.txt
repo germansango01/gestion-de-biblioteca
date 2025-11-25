@@ -1,5 +1,5 @@
 bcrypt
-numpy
-matplotlib
-pandas
 customtkinter
+matplotlib
+numpy
+pandas

@@ -19,7 +19,7 @@ class StatisticsView(ctk.CTkFrame):
         self.buttons_frame = ctk.CTkFrame(self)
         self.buttons_frame.pack(fill="x", padx=10, pady=10)
 
-        # Botones actualizados
+        # Configuración de Botones.
         ctk.CTkButton(
             self.buttons_frame, 
             text="Top 10 Libros", 
@@ -67,8 +67,11 @@ class StatisticsView(ctk.CTkFrame):
 
         self.load_data()
 
+
     def load_data(self):
-        # Cargar datos desde la DB
+        """
+        Cargar datos desde la DB
+        """
         loans = self.db.select_all("""
             SELECT books.id, books.title, books.author, books.category, books.available, loans.loan_date
             FROM books
@@ -80,7 +83,7 @@ class StatisticsView(ctk.CTkFrame):
             self.df = pd.DataFrame(loans, columns=["book_id","title","author","category","available","loan_date"])
             self.df["loan_date"] = pd.to_datetime(self.df["loan_date"])
 
-    # Abrir ventanas modales
+    # Abrir ventanas modales.
     def show_top_books(self):
         MostBorrowedBooksForm(self, self.df)
 

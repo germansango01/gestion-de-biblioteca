@@ -8,7 +8,6 @@ class BookView(ctk.CTkFrame):
     Vista de libros que muestra un Treeview con operaciones básicas:
     crear, listar y borrar (soft delete), con columnas optimizadas.
     """
-
     def __init__(self, master, db):
         """
         Inicializa la vista de libros y construye la interfaz.
@@ -20,11 +19,11 @@ class BookView(ctk.CTkFrame):
         super().__init__(master)
         self.manager = Book(db)
 
-        # Layout
+        # Configuración del layout
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
-        # --- Configuración de estilos para encabezado ---
+        # Configuración de estilos para encabezado.
         style = ttk.Style()
         style.map("Treeview.Heading", 
                 background=[('active', '#D6D6D6')],
@@ -39,9 +38,9 @@ class BookView(ctk.CTkFrame):
         frame_btn.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
         ctk.CTkButton(frame_btn, text="Nuevo Libro", command=self.open_form).pack(side="left", padx=5, pady=5)
         ctk.CTkButton(frame_btn, text="🔄 Refrescar", command=self.refresh).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(frame_btn, text="Borrar Libro", command=self.delete, fg_color="red").pack(side="right", padx=5, pady=5)
+        ctk.CTkButton(frame_btn, text="Borrar Libro", command=self.delete, fg_color="red", hover_color="#A00116", text_color="white").pack(side="right", padx=5, pady=5)
 
-        # --- Configuración del Treeview ---
+        # Configuración del Treeview.
         cols = ("ID", "Titulo", "ISBN", "Autor", "Categoría", "Disponible")
         self.tree = ttk.Treeview(self, columns=cols, show="headings")
 
@@ -93,7 +92,7 @@ class BookView(ctk.CTkFrame):
         """
         sel = self.tree.selection()
         if sel:
-            bid = self.tree.item(sel[0])['values'][0]  # ID sigue accesible aunque oculto
+            bid = self.tree.item(sel[0])['values'][0]
             if messagebox.askyesno("Confirmar", "¿Borrar libro?"):
                 self.manager.soft_delete(int(bid))
                 self.refresh()

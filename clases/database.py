@@ -5,7 +5,6 @@ class Database:
     """
     Gestión de conexión y operaciones básicas con SQLite.
     """
-    
     def __init__(self, db_name="library.db"):
         """
         Inicializa la conexión a la base de datos y crea las tablas si no existen.
@@ -20,7 +19,9 @@ class Database:
 
 
     def _connect(self):
-        """Establece la conexión a la base de datos y configura sqlite3."""
+        """
+        Establece la conexión a la base de datos y configura sqlite3.
+        """
         try:
             self._connection = sqlite3.connect(self.db_name)
             self._connection.row_factory = sqlite3.Row
@@ -30,7 +31,9 @@ class Database:
 
 
     def insert(self, query: str, params: tuple = ()) -> int | None:
-        """Ejecuta un INSERT y retorna el ID de la fila insertada."""
+        """
+        Ejecuta un INSERT y retorna el ID de la fila insertada.
+        """
         if not self._connection:
             return None
         try:
@@ -44,7 +47,9 @@ class Database:
 
 
     def update(self, query: str, params: tuple = ()) -> bool:
-        """Ejecuta un UPDATE o cualquier consulta que modifique la DB."""
+        """
+        Ejecuta un UPDATE o cualquier consulta que modifique la DB.
+        """
         if not self._connection:
             return False
         try:
@@ -58,12 +63,16 @@ class Database:
 
 
     def delete(self, query: str, params: tuple = ()) -> bool:
-        """Ejecuta un DELETE."""
+        """
+        Ejecuta un DELETE.
+        """
         return self.update(query, params)
 
 
     def select_one(self, query: str, params: tuple = ()) -> tuple | None:
-        """Ejecuta un SELECT y retorna una fila como tupla."""
+        """
+        Ejecuta un SELECT y retorna una fila como tupla.
+        """
         if not self._connection:
             return None
         try:
@@ -78,7 +87,9 @@ class Database:
 
 
     def select_all(self, query: str, params: tuple = ()) -> list[tuple]:
-        """Ejecuta un SELECT y retorna varias filas como lista de tuplas."""
+        """
+        Ejecuta un SELECT y retorna varias filas como lista de tuplas.
+        """
         if not self._connection:
             return []
         try:
@@ -92,7 +103,9 @@ class Database:
 
 
     def _setup_tables(self):
-        """Crea las tablas 'users', 'books' y 'loans' si no existen."""
+        """
+        Crea las tablas 'users', 'books' y 'loans' si no existen.
+        """
         self.update("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,7 +189,9 @@ class Database:
 
 
     def close(self):
-        """Cierra la conexión a la base de datos."""
+        """
+        Cierra la conexión a la base de datos.
+        """
         if self._connection:
             self._connection.close()
             self._connection = None

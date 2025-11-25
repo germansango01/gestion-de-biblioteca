@@ -7,7 +7,6 @@ class User:
     """
     Gestión de usuarios, incluyendo autenticación.
     """
-
     def __init__(self, db: Database):
         self.db = db
 
@@ -47,15 +46,15 @@ class User:
 
     def _validate_uniqueness(self, username: str, email: str, current_id: int | None = None) -> dict:
         """
-        Verifica la unicidad de username y email en la base de datos.
+        Verifica único de username y email en la base de datos.
         """
         errors = {}
         
-        # Verificar unicidad de username
+        # Verifica único de username
         query_u = "SELECT id FROM users WHERE username=? AND deleted_at IS NULL"
         params_u = (username,)
         
-        # Verificar unicidad de email
+        # Verifica único de email
         query_e = "SELECT id FROM users WHERE email=? AND deleted_at IS NULL"
         params_e = (email,)
 

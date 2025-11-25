@@ -5,23 +5,6 @@ class BookForm(ctk.CTkToplevel):
     """
     Formulario modal para añadir nuevos libros.
     """
-
-    @staticmethod
-    def is_valid_isbn(isbn: str) -> bool:
-        """
-        Verifica que el ISBN tenga 10 o 13 caracteres, solo dígitos o 'X' al final.
-        """
-        isbn_clean = isbn.replace('-', '').replace(' ', '').upper()
-        n = len(isbn_clean)
-        if n == 10:
-            pattern = r"^\d{9}[\dX]$"
-        elif n == 13:
-            pattern = r"^\d{13}$"
-        else:
-            return False
-        return bool(re.match(pattern, isbn_clean))
-
-
     def __init__(self, master, book_manager, refresh_callback):
         super().__init__(master)
         self.title("Nuevo Libro")
@@ -63,6 +46,22 @@ class BookForm(ctk.CTkToplevel):
         ctk.CTkButton(self, text="Guardar", command=self.save).grid(
             row=row_counter, column=0, columnspan=2, pady=20, padx=20, sticky="ew"
         )
+
+
+    @staticmethod
+    def is_valid_isbn(isbn: str) -> bool:
+        """
+        Verifica que el ISBN tenga 10 o 13 caracteres, solo dígitos o 'X' al final.
+        """
+        isbn_clean = isbn.replace('-', '').replace(' ', '').upper()
+        n = len(isbn_clean)
+        if n == 10:
+            pattern = r"^\d{9}[\dX]$"
+        elif n == 13:
+            pattern = r"^\d{13}$"
+        else:
+            return False
+        return bool(re.match(pattern, isbn_clean))
 
 
     def _validate_ui(self, data: dict) -> dict:

@@ -6,7 +6,6 @@ class HistoryView(ctk.CTkFrame):
     """
     Muestra el historial completo de préstamos (activos y devueltos).
     """
-
     def __init__(self, master, db):
         super().__init__(master)
         # Instanciamos Loan, que contiene la lógica de reportes (get_history).
@@ -14,9 +13,9 @@ class HistoryView(ctk.CTkFrame):
 
         # Configuración del layout
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)  # La tabla estará en la fila 2
+        self.grid_rowconfigure(2, weight=1)
 
-        # --- Configuración de estilos para encabezados (hover incluido) ---
+        # Configuración de estilos para encabezados.
         style = ttk.Style()
         style.map("Treeview.Heading", 
                 background=[('active', '#D6D6D6')],
@@ -44,15 +43,13 @@ class HistoryView(ctk.CTkFrame):
             command=self.refresh
         ).pack(side="left", padx=5, pady=5)
 
-        # --- Configuración de la tabla ---
+        # Configuración de la tabla.
         cols = ("ID", "Libro", "Usuario", "Prestado", "Devuelto")
         self.tree = ttk.Treeview(self, columns=cols, show="headings")
 
-        # Columna ID oculta
         self.tree.column("ID", width=0, minwidth=0, stretch=False)
         self.tree.heading("ID", text="")
 
-        # Columnas visibles con anchos y alineaciones optimizados
         self.tree.column("Libro", width=250, anchor="w")
         self.tree.heading("Libro", text="Libro")
 

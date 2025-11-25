@@ -54,7 +54,8 @@ class UserForm(ctk.CTkToplevel):
 
     def _validate_ui(self, data: dict) -> dict:
         """
-        Valida que los campos no estén vacíos, el email tenga formato correcto y la contraseña tenga al menos 6 caracteres.
+        Valida que los campos no estén vacíos, el email tenga formato correcto 
+        y la contraseña tenga al menos 6 caracteres.
         """
         ui_errors = {}
         for key, value in data.items():
